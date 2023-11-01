@@ -2,7 +2,13 @@ module Main where
 
 import Data.List as List
 import Control.Monad as Monad
-import Data.Maybe (listToMaybe,fromJust)
+import Control.Monad.Trans.Maybe as Maybe
+import Data.Maybe (listToMaybe,fromJust,catMaybes)
+import Control.Concurrent
+
+import Data.IORef
+import Data.Function
+import Data.Set as Set
 
 [ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow]="abeglmoprswy"
 bottleMaxHeight = 4 :: Int
@@ -112,27 +118,92 @@ level1013 =
   ,[],[]
   ]
 
-
+--main = solve level141
+--main = solve level843
+--main = solve level877
+--main = solve level919
+--main = solve level923
 main = solve level1013
 
-findPath :: [Level] -> Level -> Maybe [(From,To,Color)]
-findPath history level = listToMaybe $ do
-    guard $ List.notElem level history
-    move <- moves level
-    let level' = cleanup $ apply move level
-    (Just cont) <- [if isPerfect level'
-            then Just [] -- end of path
-            else findPath (level:history) level']
-    return (move:cont)
 
-findPath' :: Level -> Maybe [(From,To,Color,Int)]
+
+type HISTORY = IORef (Set Level)
+type TASK = IO (Maybe [(From,To,Color)])
+type TODOS = IORef (Maybe[TASK])
+
+type X a = MaybeT IO a
+guardHistory :: HISTORY -> Level -> X ()
+guardHistory history level = MaybeT $ do
+    atomicModifyIORef' history (\s -> (Set.insert level s, guard $ Set.notMember level s))
+createHistory :: IO HISTORY
+createHistory = newIORef Set.empty
+
+insertTODOs :: TODOS -> [TASK] -> IO ()
+insertTODOs todos tasks = do
+        atomicModifyIORef' todos (\mt -> (fmap (tasks<>) mt, ()))
+createTODOS :: IO TODOS
+createTODOS = newIORef $ Just []
+takeTODO :: TODOS -> Int -> IO (Maybe [TASK])
+takeTODO todos n = do
+    atomicModifyIORef' todos (\mt -> (fmap (List.drop n) mt, fmap (List.take n) mt))
+terminateAllTODOs :: TODOS -> IO ()
+terminateAllTODOs todos = atomicModifyIORef' todos (\mt -> (Nothing, ()))
+
+runTODOs :: TODOS -> IO (Maybe [(From,To,Color)])
+runTODOs todos = do
+    result <- newEmptyMVar
+    forkIO $ fix $ \loop -> do
+        t <- takeTODO todos 16 :: IO (Maybe [TASK])
+        case t of
+            Nothing -> return ()
+            Just [] -> do
+                threadDelay 1000000000
+                -- all tasks ended and no todos? putMVar result Nothing
+                loop
+            Just ts -> do
+                rs <- sequence ts
+                case catMaybes rs of
+                    (r:_) -> putMVar result (Just r)
+                    _ -> loop
+
+    takeMVar result
+
+type PATH = [(From,To,Color)]
+type INVPATH = PATH
+successTASK :: TODOS -> INVPATH -> TASK
+successTASK todos invpath' = do
+    terminateAllTODOs todos
+    return $ Just $ List.reverse invpath'
+
+forkTASKs :: TODOS -> [TASK] -> TASK
+forkTASKs todos tasks = do
+    insertTODOs todos tasks
+    return Nothing
+
+
+findPath :: HISTORY -> TODOS -> INVPATH -> Level -> TASK
+findPath history todos !invpath level = runMaybeT $ do
+    guardHistory history level
+    MaybeT $ forkTASKs todos $ do
+        move <- moves level
+        let level' = cleanup $ apply move level
+        let invpath' = move:invpath
+        return $ if isPerfect level'
+                    then successTASK todos invpath' -- end of path
+                    else findPath history todos invpath' level'
+
+
+findPath' :: Level -> IO (Maybe [(From,To,Color,Int)])
 findPath' level = do
-    path <- findPath [] $ cleanup level
-    return $ snd $ List.mapAccumL apply' level path
+    history <- createHistory
+    todos <- createTODOS
+    insertTODOs todos [findPath history todos [] $ cleanup level]
+    maybePath <- runTODOs todos
+    return $ snd . List.mapAccumL apply' level <$> maybePath
 
 solve :: Level -> IO ()
 solve level = do
-    let path = showPath $ findPath' level
+    path <- showPath <$> findPath' level
     putStrLn $ List.unlines path
 
 showPath :: Maybe [(From,To,Color,Int)] -> [String]
@@ -189,7 +260,7 @@ apply (from,to,_) level =
   where
     bottleFrom@(color:_) = level !! from
     bottleTo = level !! to
-    transfer = takeWhile (==color) . take (bottleMaxHeight - length bottleTo) $ bottleFrom
+    transfer = takeWhile (==color) . List.take (bottleMaxHeight - length bottleTo) $ bottleFrom
     bottleFrom' = List.drop (length transfer) bottleFrom
     bottleTo' = transfer <> bottleTo
 
