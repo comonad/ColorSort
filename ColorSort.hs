@@ -126,6 +126,79 @@ level1013 =
 main = solve level1013
 
 
+data Prog h a = Pure a
+              | forall b. Bind (Prog h b) (b -> Prog h a)
+              | Spawn [Prog h a]
+              | JoinOn h (Prog h a)
+
+deriving instance Functor (Prog h)
+instance Applicative (Prog h) where
+    --pure :: a -> f a
+    pure = Pure
+    --(<*>) :: f (a -> b) -> f a -> f b
+    (<*>) fab fa = do
+        ab <- fab
+        a <- fa
+        return (ab a)
+instance Monad (Prog h) where
+    --(>>=) :: m a -> (a -> m b) -> m b
+    (>>=) (Pure a) f = f a
+    (>>=) ma f = Bind ma f
+
+
+runProg :: (Ord h) => Prog h a -> [a]
+runProg p = runProgY (Set.empty,[p],[])
+
+runProgY :: (Ord h) => (Set h,[Prog h a],[a]) -> [a]
+runProgY (history,[],as) = as
+runProgY (history,[p],as) = as <> runProgY (runProgX history p)
+runProgY (history,ps,as) = as <> runProgY (runProgX history (Spawn ps))
+
+runProgX :: (Ord h) => Set h -> Prog h a -> (Set h,[Prog h a],[a])
+runProgX history (Pure a) = (history,[],[a])
+runProgX history (JoinOn h cont) | Set.member h history = (history,[],[])
+                                 | otherwise = (Set.insert h history,[cont],[])
+runProgX history (Bind (pb :: Prog h b) (b_pa :: b -> Prog h a)) =
+    runProgX history $
+        case pb of
+            (Pure a) -> (b_pa a)
+            (Bind (pc :: Prog h c) (c_pb :: c -> Prog h b)) -> (pc >>= (c_pb >=> b_pa))
+            (JoinOn h cont) -> (JoinOn h (cont >>= b_pa))
+            (Spawn pbs) -> (Spawn $ fmap (>>=b_pa) pbs)
+runProgX !history (Spawn []) = (history,[],[])
+runProgX !history (Spawn ((pa:pas)::[Prog h a])) =
+    let (!history',x::[Prog h a],y::[a]) = runProgX history pa
+        (!history'',x'::[Prog h a],y'::[a]) = runProgX history' (Spawn pas)
+     in (history'',x<>x',y<>y')
+
+
+
+
+--data Prog h a = Pure a
+--              | forall b. Bind (Prog h b) (b -> Prog h a)
+--              | Spawn [Prog h a]
+--              | JoinOn h (Prog h a)
+findPathProg :: INVPATH -> Level -> Prog Level ([(From,To,Color)])
+findPathProg !invpath level = do
+    let guardHistory :: h -> Prog h ()
+        guardHistory h = JoinOn h (Pure ())
+        foreach :: [a] -> Prog h a
+        foreach as = Spawn $ fmap Pure as
+        successTASK invpath' = return $ List.reverse invpath'
+    guardHistory level
+    move <- foreach $ moves level
+    let level' = cleanup $ apply move level
+    let invpath' = move:invpath
+    if isPerfect level'
+                then successTASK invpath' -- end of path
+                else findPathProg invpath' level'
+
+findPath'Prog :: Level -> IO (Maybe [(From,To,Color,Int)])
+findPath'Prog level = do
+    let maybePath = listToMaybe $ runProg $ findPathProg [] $ cleanup level
+    return $ snd . List.mapAccumL apply' level <$> maybePath
+
+
 
 type HISTORY = IORef (Set Level)
 type TASK = IO (Maybe [(From,To,Color)])
@@ -203,7 +276,7 @@ findPath' level = do
 
 solve :: Level -> IO ()
 solve level = do
-    path <- showPath <$> findPath' level
+    path <- showPath <$> findPath'Prog level
     putStrLn $ List.unlines path
 
 showPath :: Maybe [(From,To,Color,Int)] -> [String]
