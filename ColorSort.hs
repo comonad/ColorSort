@@ -9,6 +9,7 @@ import Control.Concurrent
 import Data.IORef
 import Data.Function
 import Data.Set as Set
+import Data.Foldable as Foldable
 
 [ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow]="abeglmoprswy"
 bottleMaxHeight = 4 :: Int
@@ -131,6 +132,81 @@ data Prog h a = Pure a
               | Spawn [Prog h a]
               | JoinOn h (Prog h a)
 
+
+runBind :: Prog h a -> Prog h a
+runBind (Bind pb b_pa) = case pb of
+                            (Pure a) -> runBind (b_pa a)
+                            (Bind (pc :: Prog h c) (c_pb :: c -> Prog h b)) -> runBind (pc >>= (c_pb >=> b_pa))
+                            (JoinOn h cont) -> (JoinOn h $ runBind (cont >>= b_pa))
+                            (Spawn pbs) -> (Spawn $ fmap (runBind . (>>=b_pa)) pbs)
+runBind x = x
+
+
+data FreeMonoid a = NIL | CONS a (FreeMonoid a) | APPEND (FreeMonoid a) (FreeMonoid a) | SNOC (FreeMonoid a) a
+    deriving Functor
+instance Semigroup (FreeMonoid a) where
+    NIL<>bs = bs
+    (CONS a NIL)<>bs = CONS a bs
+    (SNOC NIL a)<>bs = CONS a bs
+    as<>NIL = as
+    as<>(CONS b NIL) = SNOC as b
+    as<>(SNOC NIL b) = SNOC as b
+    as<>bs = APPEND as bs
+instance Monoid (FreeMonoid a) where
+    mempty = NIL
+instance Eq a => Eq (FreeMonoid a) where
+    (==) = (==) `on` Foldable.toList
+instance Ord a => Ord (FreeMonoid a) where
+    compare = compare `on` Foldable.toList
+instance Show a => Show (FreeMonoid a) where
+    show = show . Foldable.toList
+instance Applicative FreeMonoid where
+    pure a = CONS a NIL
+    --(<*>) :: f (a -> b) -> f a -> f b
+    (<*>) fab fa = do
+        ab <- fab
+        a <- fa
+        return (ab a)
+instance Monad FreeMonoid where
+    (>>=) NIL f = NIL
+    (>>=) (CONS a bs) f = (f a) <> (bs >>= f)
+    (>>=) (APPEND as bs) f = (as >>= f) <> (bs >>= f)
+    (>>=) (SNOC as b) f = (as >>= f) <> (f b)
+
+instance Foldable FreeMonoid where
+    --foldr :: (a -> b -> b) -> b -> Monoid a -> b
+    foldr (<) nil m = m << nil
+        where
+        NIL << nil = nil
+        (CONS a bs) << nil = a < (bs << nil)
+        (APPEND as bs) << nil = as << (bs << nil)
+        (SNOC as b) << nil = as << (b < nil)
+
+
+data Assembly h a = AResult a | AJoin h [Assembly h a]
+assemble :: Prog h a -> [Assembly h a]
+assemble p = assemble' p []
+    where
+    assemble' :: Prog h a -> [Assembly h a] -> [Assembly h a]
+    assemble' (Pure a) z = AResult a:z
+    assemble' p@(Bind _ _) z = assemble' (runBind p) z
+    --assemble' z (Spawn ps) = ps >>= assemble' z
+    assemble' (Spawn ps) z = List.foldr assemble' z ps
+    assemble' (JoinOn h cont) z = AJoin h (assemble cont) : z
+
+runAssembly :: Ord h => Set h -> [Assembly h a] -> [a]
+runAssembly history as = runAssembly' [] history as
+    where
+    runAssembly' :: Ord h => [[Assembly h a]] -> Set h -> [Assembly h a] -> [a]
+    runAssembly' [] history [] = []
+    runAssembly' bs history [] = runAssembly' [] history (mconcat $ List.reverse bs)
+    runAssembly' bs history (AResult a:as) = a:runAssembly' bs history as
+    runAssembly' bs history (AJoin h a:as) = if Set.member h history then runAssembly' bs history as else runAssembly' (a:bs) (Set.insert h history) as
+
+runProgA :: (Ord h) => Prog h a -> [a]
+runProgA p = runAssembly Set.empty (assemble p)
+
+
 deriving instance Functor (Prog h)
 instance Applicative (Prog h) where
     --pure :: a -> f a
@@ -144,32 +220,6 @@ instance Monad (Prog h) where
     --(>>=) :: m a -> (a -> m b) -> m b
     (>>=) (Pure a) f = f a
     (>>=) ma f = Bind ma f
-
-
-runProg :: (Ord h) => Prog h a -> [a]
-runProg p = runProgY (Set.empty,[p],[])
-
-runProgY :: (Ord h) => (Set h,[Prog h a],[a]) -> [a]
-runProgY (history,[],as) = as
-runProgY (history,[p],as) = as <> runProgY (runProgX history p)
-runProgY (history,ps,as) = as <> runProgY (runProgX history (Spawn ps))
-
-runProgX :: (Ord h) => Set h -> Prog h a -> (Set h,[Prog h a],[a])
-runProgX history (Pure a) = (history,[],[a])
-runProgX history (JoinOn h cont) | Set.member h history = (history,[],[])
-                                 | otherwise = (Set.insert h history,[cont],[])
-runProgX history (Bind (pb :: Prog h b) (b_pa :: b -> Prog h a)) =
-    runProgX history $
-        case pb of
-            (Pure a) -> (b_pa a)
-            (Bind (pc :: Prog h c) (c_pb :: c -> Prog h b)) -> (pc >>= (c_pb >=> b_pa))
-            (JoinOn h cont) -> (JoinOn h (cont >>= b_pa))
-            (Spawn pbs) -> (Spawn $ fmap (>>=b_pa) pbs)
-runProgX !history (Spawn []) = (history,[],[])
-runProgX !history (Spawn ((pa:pas)::[Prog h a])) =
-    let (!history',x::[Prog h a],y::[a]) = runProgX history pa
-        (!history'',x'::[Prog h a],y'::[a]) = runProgX history' (Spawn pas)
-     in (history'',x<>x',y<>y')
 
 
 
@@ -195,7 +245,7 @@ findPathProg !invpath level = do
 
 findPath'Prog :: Level -> IO (Maybe [(From,To,Color,Int)])
 findPath'Prog level = do
-    let maybePath = listToMaybe $ runProg $ findPathProg [] $ cleanup level
+    let maybePath = listToMaybe $ runProgA $ findPathProg [] $ cleanup level
     return $ snd . List.mapAccumL apply' level <$> maybePath
 
 
