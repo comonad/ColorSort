@@ -142,6 +142,9 @@ runBind (Bind pb b_pa) = case pb of
 runBind x = x
 
 
+freeMonoid :: [a] -> FreeMonoid a
+freeMonoid = List.foldr CONS NIL
+
 data FreeMonoid a = NIL | CONS a (FreeMonoid a) | APPEND (FreeMonoid a) (FreeMonoid a) | SNOC (FreeMonoid a) a
     deriving Functor
 instance Semigroup (FreeMonoid a) where
@@ -165,8 +168,7 @@ instance Applicative FreeMonoid where
     --(<*>) :: f (a -> b) -> f a -> f b
     (<*>) fab fa = do
         ab <- fab
-        a <- fa
-        return (ab a)
+        ab <$> fa
 instance Monad FreeMonoid where
     (>>=) NIL f = NIL
     (>>=) (CONS a bs) f = (f a) <> (bs >>= f)
@@ -183,28 +185,24 @@ instance Foldable FreeMonoid where
         (SNOC as b) << nil = as << (b < nil)
 
 
-data Assembly h a = AResult a | AJoin h [Assembly h a]
-assemble :: Prog h a -> [Assembly h a]
-assemble p = assemble' p []
-    where
-    assemble' :: Prog h a -> [Assembly h a] -> [Assembly h a]
-    assemble' (Pure a) z = AResult a:z
-    assemble' p@(Bind _ _) z = assemble' (runBind p) z
-    --assemble' z (Spawn ps) = ps >>= assemble' z
-    assemble' (Spawn ps) z = List.foldr assemble' z ps
-    assemble' (JoinOn h cont) z = AJoin h (assemble cont) : z
+data Assembly h a = AResult a | AJoin h (FreeMonoid(Assembly h a))
+assemble :: Prog h a -> FreeMonoid(Assembly h a)
+assemble (Pure a) = pure (AResult a)
+assemble p@(Bind _ _) = assemble (runBind p)
+assemble (Spawn ps) = mconcat $ assemble <$> ps
+assemble (JoinOn h cont) = pure (AJoin h (assemble cont))
 
 runAssembly :: Ord h => Set h -> [Assembly h a] -> [a]
-runAssembly history as = runAssembly' [] history as
+runAssembly history as = runAssembly' mempty history as
     where
-    runAssembly' :: Ord h => [[Assembly h a]] -> Set h -> [Assembly h a] -> [a]
-    runAssembly' [] history [] = []
-    runAssembly' bs history [] = runAssembly' [] history (mconcat $ List.reverse bs)
+    runAssembly' :: Ord h => FreeMonoid (Assembly h a) -> Set h -> [Assembly h a] -> [a]
+    runAssembly' NIL history [] = []
+    runAssembly' bs history [] = runAssembly' mempty history (Foldable.toList bs)
     runAssembly' bs history (AResult a:as) = a:runAssembly' bs history as
-    runAssembly' bs history (AJoin h a:as) = if Set.member h history then runAssembly' bs history as else runAssembly' (a:bs) (Set.insert h history) as
+    runAssembly' bs history (AJoin h a:as) = if Set.member h history then runAssembly' bs history as else runAssembly' (bs<>a) (Set.insert h history) as
 
 runProgA :: (Ord h) => Prog h a -> [a]
-runProgA p = runAssembly Set.empty (assemble p)
+runProgA p = runAssembly Set.empty  $ Foldable.toList (assemble p)
 
 
 deriving instance Functor (Prog h)
@@ -220,8 +218,6 @@ instance Monad (Prog h) where
     --(>>=) :: m a -> (a -> m b) -> m b
     (>>=) (Pure a) f = f a
     (>>=) ma f = Bind ma f
-
-
 
 
 --data Prog h a = Pure a
@@ -249,80 +245,8 @@ findPath'Prog level = do
     return $ snd . List.mapAccumL apply' level <$> maybePath
 
 
-
-type HISTORY = IORef (Set Level)
-type TASK = IO (Maybe [(From,To,Color)])
-type TODOS = IORef (Maybe[TASK])
-
-type X a = MaybeT IO a
-guardHistory :: HISTORY -> Level -> X ()
-guardHistory history level = MaybeT $ do
-    atomicModifyIORef' history (\s -> (Set.insert level s, guard $ Set.notMember level s))
-createHistory :: IO HISTORY
-createHistory = newIORef Set.empty
-
-insertTODOs :: TODOS -> [TASK] -> IO ()
-insertTODOs todos tasks = do
-        atomicModifyIORef' todos (\mt -> (fmap (tasks<>) mt, ()))
-createTODOS :: IO TODOS
-createTODOS = newIORef $ Just []
-takeTODO :: TODOS -> Int -> IO (Maybe [TASK])
-takeTODO todos n = do
-    atomicModifyIORef' todos (\mt -> (fmap (List.drop n) mt, fmap (List.take n) mt))
-terminateAllTODOs :: TODOS -> IO ()
-terminateAllTODOs todos = atomicModifyIORef' todos (\mt -> (Nothing, ()))
-
-runTODOs :: TODOS -> IO (Maybe [(From,To,Color)])
-runTODOs todos = do
-    result <- newEmptyMVar
-    forkIO $ fix $ \loop -> do
-        t <- takeTODO todos 16 :: IO (Maybe [TASK])
-        case t of
-            Nothing -> return ()
-            Just [] -> do
-                threadDelay 1000000000
-                -- all tasks ended and no todos? putMVar result Nothing
-                loop
-            Just ts -> do
-                rs <- sequence ts
-                case catMaybes rs of
-                    (r:_) -> putMVar result (Just r)
-                    _ -> loop
-
-    takeMVar result
-
 type PATH = [(From,To,Color)]
 type INVPATH = PATH
-successTASK :: TODOS -> INVPATH -> TASK
-successTASK todos invpath' = do
-    terminateAllTODOs todos
-    return $ Just $ List.reverse invpath'
-
-forkTASKs :: TODOS -> [TASK] -> TASK
-forkTASKs todos tasks = do
-    insertTODOs todos tasks
-    return Nothing
-
-
-findPath :: HISTORY -> TODOS -> INVPATH -> Level -> TASK
-findPath history todos !invpath level = runMaybeT $ do
-    guardHistory history level
-    MaybeT $ forkTASKs todos $ do
-        move <- moves level
-        let level' = cleanup $ apply move level
-        let invpath' = move:invpath
-        return $ if isPerfect level'
-                    then successTASK todos invpath' -- end of path
-                    else findPath history todos invpath' level'
-
-
-findPath' :: Level -> IO (Maybe [(From,To,Color,Int)])
-findPath' level = do
-    history <- createHistory
-    todos <- createTODOS
-    insertTODOs todos [findPath history todos [] $ cleanup level]
-    maybePath <- runTODOs todos
-    return $ snd . List.mapAccumL apply' level <$> maybePath
 
 solve :: Level -> IO ()
 solve level = do
