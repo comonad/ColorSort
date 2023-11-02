@@ -168,7 +168,7 @@ runAssembly history as = runAssembly' NIL history as
     runAssembly' bs history (AResult a:as) = a:runAssembly' bs history as
     runAssembly' bs history (AJoin h a:as) = if Set.member h history then runAssembly' bs history as else runAssembly' (bs<>a) (Set.insert h history) as
     runAssembly' NIL history [] = []
-    runAssembly' bs history [] = runAssembly' mempty history (Foldable.toList bs)
+    runAssembly' bs history [] = runAssembly' NIL history (Foldable.toList bs)
 
 runProgA :: (Ord h) => Prog h a -> [a]
 runProgA p = runAssembly Set.empty  $ Foldable.toList (assemble p)
