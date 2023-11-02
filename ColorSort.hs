@@ -1,3 +1,5 @@
+{-# LANGUAGE ViewPatterns #-}
+
 module Main where
 
 import Data.List as List
@@ -10,6 +12,9 @@ import Data.IORef
 import Data.Function
 import Data.Set as Set
 import Data.Foldable as Foldable
+
+import FreeMonoid
+
 
 [ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow]="abeglmoprswy"
 bottleMaxHeight = 4 :: Int
@@ -127,6 +132,12 @@ level1013 =
 main = solve level1013
 
 
+
+
+
+
+
+
 data Prog h a = Pure a
               | forall b. Bind (Prog h b) (b -> Prog h a)
               | Spawn [Prog h a]
@@ -142,48 +153,6 @@ runBind (Bind pb b_pa) = case pb of
 runBind x = x
 
 
-freeMonoid :: [a] -> FreeMonoid a
-freeMonoid = List.foldr CONS NIL
-
-data FreeMonoid a = NIL | CONS a (FreeMonoid a) | APPEND (FreeMonoid a) (FreeMonoid a) | SNOC (FreeMonoid a) a
-    deriving Functor
-instance Semigroup (FreeMonoid a) where
-    NIL<>bs = bs
-    (CONS a NIL)<>bs = CONS a bs
-    (SNOC NIL a)<>bs = CONS a bs
-    as<>NIL = as
-    as<>(CONS b NIL) = SNOC as b
-    as<>(SNOC NIL b) = SNOC as b
-    as<>bs = APPEND as bs
-instance Monoid (FreeMonoid a) where
-    mempty = NIL
-instance Eq a => Eq (FreeMonoid a) where
-    (==) = (==) `on` Foldable.toList
-instance Ord a => Ord (FreeMonoid a) where
-    compare = compare `on` Foldable.toList
-instance Show a => Show (FreeMonoid a) where
-    show = show . Foldable.toList
-instance Applicative FreeMonoid where
-    pure a = CONS a NIL
-    --(<*>) :: f (a -> b) -> f a -> f b
-    (<*>) fab fa = do
-        ab <- fab
-        ab <$> fa
-instance Monad FreeMonoid where
-    (>>=) NIL f = NIL
-    (>>=) (CONS a bs) f = (f a) <> (bs >>= f)
-    (>>=) (APPEND as bs) f = (as >>= f) <> (bs >>= f)
-    (>>=) (SNOC as b) f = (as >>= f) <> (f b)
-
-instance Foldable FreeMonoid where
-    --foldr :: (a -> b -> b) -> b -> Monoid a -> b
-    foldr (<) nil m = m << nil
-        where
-        NIL << nil = nil
-        (CONS a bs) << nil = a < (bs << nil)
-        (APPEND as bs) << nil = as << (bs << nil)
-        (SNOC as b) << nil = as << (b < nil)
-
 
 data Assembly h a = AResult a | AJoin h (FreeMonoid(Assembly h a))
 assemble :: Prog h a -> FreeMonoid(Assembly h a)
@@ -193,13 +162,13 @@ assemble (Spawn ps) = mconcat $ assemble <$> ps
 assemble (JoinOn h cont) = pure (AJoin h (assemble cont))
 
 runAssembly :: Ord h => Set h -> [Assembly h a] -> [a]
-runAssembly history as = runAssembly' mempty history as
+runAssembly history as = runAssembly' NIL history as
     where
     runAssembly' :: Ord h => FreeMonoid (Assembly h a) -> Set h -> [Assembly h a] -> [a]
-    runAssembly' NIL history [] = []
-    runAssembly' bs history [] = runAssembly' mempty history (Foldable.toList bs)
     runAssembly' bs history (AResult a:as) = a:runAssembly' bs history as
     runAssembly' bs history (AJoin h a:as) = if Set.member h history then runAssembly' bs history as else runAssembly' (bs<>a) (Set.insert h history) as
+    runAssembly' NIL history [] = []
+    runAssembly' bs history [] = runAssembly' mempty history (Foldable.toList bs)
 
 runProgA :: (Ord h) => Prog h a -> [a]
 runProgA p = runAssembly Set.empty  $ Foldable.toList (assemble p)
@@ -224,7 +193,7 @@ instance Monad (Prog h) where
 --              | forall b. Bind (Prog h b) (b -> Prog h a)
 --              | Spawn [Prog h a]
 --              | JoinOn h (Prog h a)
-findPathProg :: INVPATH -> Level -> Prog Level ([(From,To,Color)])
+findPathProg :: INVPATH -> Level -> Prog Level PATH
 findPathProg !invpath level = do
     let guardHistory :: h -> Prog h ()
         guardHistory h = JoinOn h (Pure ())
