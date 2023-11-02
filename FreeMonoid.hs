@@ -3,7 +3,10 @@
 
 
 module FreeMonoid (
-  freeMonoid, FreeMonoid(NIL), pattern CONS, pattern SNOC, unCONS, unSNOC, Foldable.toList
+  freeMonoid, FreeMonoid(NIL),
+  pattern CONS, pattern SNOC, pattern SINGLETON, pattern APPEND,
+  unCONS, unSNOC, unSINGLETON, unAPPEND,
+  Foldable.toList
 ) where
 
 
@@ -14,9 +17,14 @@ import Data.Foldable as Foldable
 
 pattern CONS x xs <- (unCONS -> Just(x,xs)) where
     CONS x xs = CONS_ x xs
-
 pattern SNOC xs x <- (unSNOC -> Just(xs,x)) where
     SNOC xs x = SNOC_ xs x
+
+pattern SINGLETON x <- (unSINGLETON -> Just x) where
+    SINGLETON x = CONS_ x NIL
+pattern APPEND as bs <- (unAPPEND -> Just (as,bs)) where
+    APPEND as bs = APPEND_ as bs
+
 
 
 freeMonoid :: [a] -> FreeMonoid a
@@ -35,6 +43,17 @@ unSNOC (CONS_ a (unSNOC -> Just(br,b))) = Just(CONS_ a br,b)
 unSNOC (APPEND_ as (unSNOC -> Just(br,b))) = Just(as<>br,b)
 unSNOC (SNOC_ as b) = Just(as,b)
 
+unSINGLETON :: FreeMonoid a -> Maybe a
+unSINGLETON (CONS_ a NIL) = Just a
+unSINGLETON (SNOC_ NIL b) = Just b
+unSINGLETON _ = Nothing
+unAPPEND :: FreeMonoid a -> Maybe(FreeMonoid a,FreeMonoid a)
+unAPPEND NIL = Nothing
+unAPPEND (CONS_ _ NIL) = Nothing
+unAPPEND (SNOC_ NIL _) = Nothing
+unAPPEND (APPEND_ as bs) = Just(as,bs)
+unAPPEND (CONS_ a bs) = Just(SINGLETON a,bs)
+unAPPEND (SNOC_ as b) = Just(as,SINGLETON b)
 
 data FreeMonoid a
     = NIL
