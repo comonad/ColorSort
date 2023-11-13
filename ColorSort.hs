@@ -123,13 +123,58 @@ level1013 =
   ,[ash,blue,weed,sky]
   ,[],[]
   ]
+level1051 :: Level
+level1051 =
+  [[lila,yellow,ash,orange]
+  ,[earth,sky,ash,mint]
+  ,[sky,orange,red,ash]
+  ,[earth,lila,blue,earth]
+  ,[orange,sky,yellow,lila]
+  ,[blue,green,mint,pink]
+  ,[sky,green,pink,red]
+  ,[weed,orange,yellow,blue]
+  ,[weed,earth,ash,mint]
+  ,[green,yellow,mint,weed]
+  ,[red,pink,blue,red]
+  ,[lila,weed,green,pink]
+  ,[],[]
+  ]
+
+{-
+
+levelXXXX :: Level
+levelXXXX =
+  [[,,,]
+  ,[,,,]
+  ,[,,,]
+  ,[,,,]
+  ,[,,,]
+  ,[,,,]
+  ,[,,,]
+
+  ,[,,,]
+  ,[,,,]
+  ,[,,,]
+  ,[,,,]
+  ,[,,,]
+
+  ,[],[]
+  ]
+
+-- [ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow]
+-- [ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow]
+-- [ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow]
+-- [ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow]
+
+-}
 
 --main = solve level141
 --main = solve level843
 --main = solve level877
 --main = solve level919
 --main = solve level923
-main = solve level1013
+--main = solve level1013
+main = solve level1051
 
 
 
