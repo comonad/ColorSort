@@ -1,5 +1,6 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 
 module FreeMonoid (

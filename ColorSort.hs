@@ -1,4 +1,10 @@
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE DeriveFunctor #-}
+
 
 module Main where
 

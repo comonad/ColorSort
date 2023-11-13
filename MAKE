@@ -1,1 +1,2 @@
-ghc --make -O ColorSort.hs
+#ghc --make -XGHC2021 -O ColorSort.hs
+ghc --make -XHaskell2010 -O ColorSort.hs
