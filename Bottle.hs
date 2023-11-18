@@ -15,7 +15,7 @@ import Control.Monad as Monad
 import Control.Monad.Trans.Maybe as Maybe
 import Data.Maybe (listToMaybe,fromJust,catMaybes,maybeToList)
 import Control.Concurrent
-
+import Data.Bits
 import Data.IORef
 import Data.Function
 import Data.Set as Set
@@ -33,22 +33,39 @@ instance Show Color where
 
 
 
-makeBottle :: [Color] -> Bottle
-makeBottle cs = Bottle_ [(List.length g,c)|g@(c:_)<-List.group cs] (List.length cs)
 
 type Liquid = (Int,Color)
-data Bottle = Bottle_
-    { bottleLiquids :: [Liquid]
-    , bottleFillLevel :: !Int
-    } deriving (Eq,Ord)
+--data Bottle = Bottle_
+--    { bottleLiquids :: [Liquid]
+--    , bottleFillLevel :: !Int
+--    } deriving (Eq,Ord)
+data Bottle = Bottle_ Integer deriving (Eq,Ord)
+
+makeBottle :: [Color] -> Bottle
+makeBottle cs = List.foldr bottle_stackLiquid (Bottle_ 0) liquids
+    where
+        liquids :: [Liquid]
+        liquids = [(List.length g,c)|g@(c:_)<-List.group cs]
+
+bottleFillLevel :: Bottle -> Int
+bottleFillLevel (Bottle_ b) = fromIntegral $ b .&. 0x3f
+
+pack_liquid :: Liquid -> Integer
+pack_liquid (n,Color_ c) = fromIntegral $ (n`shiftL`6).|. c
+unpack_liquid :: Integer -> Liquid
+unpack_liquid (fromIntegral->i) = ((i `shiftR` 6) .&. 0x3f,Color_ $ i .&. 0x3f)
 
 bottle_stackLiquid :: Liquid -> Bottle -> Bottle
-bottle_stackLiquid li@(n,_) Bottle_{..} = Bottle_{bottleLiquids=li:bottleLiquids,bottleFillLevel=bottleFillLevel+n}
+bottle_stackLiquid li@(n,_) bottle@(Bottle_ b) =
+    let bottleFillLevel' = fromIntegral $ bottleFillLevel bottle + n
+     in Bottle_ $ ((((b `shiftR` 6) `shiftL` 12) .|. pack_liquid li) `shiftL` 6) .|. bottleFillLevel'
 
 bottle_popLiquid :: Bottle -> Maybe(Liquid,Bottle)
-bottle_popLiquid Bottle_{bottleLiquids=[]} = Nothing
-bottle_popLiquid Bottle_{bottleLiquids=(li@(n,_)):bottleLiquids,bottleFillLevel} =
-    Just (li,Bottle_{bottleLiquids,bottleFillLevel=bottleFillLevel-n})
+bottle_popLiquid (Bottle_ 0) = Nothing
+bottle_popLiquid bottle@(Bottle_ b) =
+    let li@(n,_) = unpack_liquid (b `shiftR` 6)
+        bottleFillLevel' = fromIntegral $ bottleFillLevel bottle - n
+     in Just (li,Bottle_ $ ((b `shiftR` 18)`shiftL` 6).|. bottleFillLevel')
 
 
 
