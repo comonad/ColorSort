@@ -33,12 +33,13 @@ instance Show Color where
 
 
 
-type Bottle = [Color]
-
+newtype Bottle = Bottle_ [Color] deriving (Eq,Ord)
+makeBottle :: [Color] -> Bottle
+makeBottle = Bottle_
 
 type Level = [Bottle]
 level141 :: Level
-level141 =
+level141 = makeBottle <$>
   [[mint,ash,sky,orange]
   ,[orange,orange,pink,yellow]
   ,[yellow,orange,red,green]
@@ -54,7 +55,7 @@ level141 =
   ,[],[]
   ]
 level843 :: Level
-level843 =
+level843 = makeBottle <$>
   [[ash,green,sky,weed]
   ,[red,pink,green,lila]
   ,[mint,earth,ash,blue]
@@ -70,7 +71,7 @@ level843 =
   ,[],[]
   ]
 level877 :: Level
-level877 =
+level877 = makeBottle <$>
   [[ash,yellow,blue,pink]
   ,[orange,sky,lila,orange]
   ,[pink,green,green,sky]
@@ -86,7 +87,7 @@ level877 =
   ,[],[]
   ]
 level919 :: Level
-level919 =
+level919 = makeBottle <$>
   [[earth,yellow,earth,weed]
   ,[pink,pink,green,pink]
   ,[mint,weed,yellow,blue]
@@ -102,7 +103,7 @@ level919 =
   ,[],[]
   ]
 level923 :: Level
-level923 =
+level923 = makeBottle <$>
   [[ash,lila,mint,yellow]
   ,[weed,ash,blue,mint]
   ,[lila,orange,blue,sky]
@@ -118,7 +119,7 @@ level923 =
   ,[],[]
   ]
 level1013 :: Level
-level1013 =
+level1013 = makeBottle <$>
   [[lila,lila,weed,mint]
   ,[ash,red,sky,yellow]
   ,[earth,green,lila,earth]
@@ -134,7 +135,7 @@ level1013 =
   ,[],[]
   ]
 level1051 :: Level
-level1051 =
+level1051 = makeBottle <$>
   [[lila,yellow,ash,orange]
   ,[earth,sky,ash,mint]
   ,[sky,orange,red,ash]
@@ -151,7 +152,7 @@ level1051 =
   ]
 
 level1297 :: Level
-level1297 =
+level1297 = makeBottle <$>
   [[orange,red,green,weed]
   ,[ash,yellow,green,lila]
   ,[mint,weed,sky,earth]
@@ -168,7 +169,7 @@ level1297 =
   ]
 
 level1337 :: Level
-level1337 =
+level1337 = makeBottle <$>
   [[mint,blue,sky,lila]
   ,[pink,green,ash,lila]
   ,[weed,orange,ash,earth]
@@ -345,39 +346,42 @@ apply' level (from,to,color) = (apply ft level,ft')
 
 type Liquid = (Int,Color)
 bottleTopLiquid :: Bottle -> Maybe Liquid
-bottleTopLiquid bottle = do
+bottleTopLiquid bottle@(Bottle_ bottle_) = do
     color <- bottleTopColor bottle
-    return (List.length $ List.takeWhile(==color) bottle,color)
+    return (List.length $ List.takeWhile(==color) bottle_,color)
 bottleTopColor :: Bottle -> Maybe Color
-bottleTopColor bottle = do
+bottleTopColor (Bottle_ bottle) = do
     (color:_) <- Just bottle
     return color
 bottleUniColor :: Bottle -> Maybe Color
-bottleUniColor bottle = do
+bottleUniColor (Bottle_ bottle) = do
     (color:_) <- Just bottle
     guard $ List.all (==color) bottle
     return color
 bottleFillLevel :: Bottle -> Int
-bottleFillLevel = List.length
+bottleFillLevel (Bottle_ bottle) = List.length bottle
 bottleFreeSpace :: Bottle -> Int
 bottleFreeSpace bottle = bottleMaxHeight - bottleFillLevel bottle
 bottleIsEmpty :: Bottle -> Bool
-bottleIsEmpty = List.null
+bottleIsEmpty (Bottle_ bottle) = List.null bottle
 bottleIsFull :: Bottle -> Bool
 bottleIsFull bottle = bottleFillLevel bottle == bottleMaxHeight
 bottleIsUnicolor :: Color -> Bottle -> Bool
-bottleIsUnicolor color [] = False
-bottleIsUnicolor color bottle = List.all (==color) bottle
+bottleIsUnicolor color (Bottle_ []) = False
+bottleIsUnicolor color (Bottle_ bottle) = List.all (==color) bottle
 bottleIsComplete :: Bottle -> Bool
 bottleIsComplete bottle = (fst<$>bottleTopLiquid bottle) == Just bottleMaxHeight
 bottleDropN :: Int -> Bottle -> Bottle
-bottleDropN n = List.drop n
+bottleDropN n (Bottle_ bottle) = Bottle_ $ List.drop n bottle
+bottleFillN :: Int -> Color -> Bottle -> Bottle
+bottleFillN n color (Bottle_ bottle) = Bottle_ $ List.replicate n color <> bottle
 bottleTransferFromTo :: (Bottle,Bottle) -> Maybe (Bottle,Bottle)
 bottleTransferFromTo (fromBottle,toBottle) = do
     (n,color)<-bottleTopLiquid fromBottle
     let k = bottleFreeSpace toBottle
     let t = n `min` k
-    return (bottleDropN t fromBottle,List.replicate t color <> toBottle)
+    guard $ bottleIsEmpty toBottle || bottleTopColor toBottle == Just color
+    return (bottleDropN t fromBottle, bottleFillN t color toBottle)
 
 
 
@@ -417,7 +421,7 @@ apply (from,to,_) level =
     | (bottle, i) <- List.zip level [0..]
     ]
   where
-    bottleFrom@(_:_) = level !! from
+    bottleFrom = level !! from
     bottleTo = level !! to
     Just (bottleFrom',bottleTo') = bottleTransferFromTo (bottleFrom,bottleTo)
 
@@ -428,7 +432,7 @@ cleanup level = List.sort [ bottle
                           ]
 
 isPerfect :: Level -> Bool
-isPerfect = List.null . mconcat
+isPerfect = (==) [makeBottle [],makeBottle []]
 
 
 
