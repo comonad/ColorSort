@@ -22,7 +22,7 @@ import Data.Foldable as Foldable
 import FreeMonoid
 
 import Bottle
-
+import Prog
 
 type Level = [Bottle]
 level141 :: Level
@@ -215,67 +215,6 @@ main = solve level1337
 
 
 
-data Prog h a = Pure a
-              | forall b. Bind (Prog h b) (b -> Prog h a)
-              | Spawn [Prog h a]
-              | JoinOn h (Prog h a)
-
-guardHistory :: h -> Prog h ()
-guardHistory h = JoinOn h (Pure ())
-foreach :: [a] -> Prog h a
-foreach as = Spawn $ fmap Pure as
-with :: Maybe a -> Prog h a
-with Nothing = Spawn []
-with (Just a) = Pure a
-
-
-
-runBind :: Prog h a -> Prog h a
-runBind (Bind pb b_pa) = case pb of
-                            (Pure a) -> runBind (b_pa a)
-                            (Bind (pc :: Prog h c) (c_pb :: c -> Prog h b)) -> runBind (pc >>= (c_pb >=> b_pa))
-                            (JoinOn h cont) -> (JoinOn h $ runBind (cont >>= b_pa))
-                            (Spawn pbs) -> (Spawn $ fmap (runBind . (>>=b_pa)) pbs)
-runBind x = x
-
-
-
-data Assembly h a = AResult a | AJoin h (FreeMonoid(Assembly h a))
-assemble :: Prog h a -> FreeMonoid(Assembly h a)
-assemble (Pure a) = pure (AResult a)
-assemble p@(Bind _ _) = assemble (runBind p)
-assemble (Spawn ps) = mconcat $ assemble <$> ps
-assemble (JoinOn h cont) = pure (AJoin h (assemble cont))
-
-runAssembly :: Ord h => Set h -> [Assembly h a] -> [a]
-runAssembly history as = runAssembly' NIL history as
-    where
-    runAssembly' :: Ord h => FreeMonoid (Assembly h a) -> Set h -> [Assembly h a] -> [a]
-    runAssembly' bs history (AResult a:as) = a:runAssembly' bs history as
-    runAssembly' bs history (AJoin h a:as) = if Set.member h history then runAssembly' bs history as else runAssembly' (bs<>a) (Set.insert h history) as
-    runAssembly' NIL history [] = []
-    runAssembly' bs history [] = runAssembly' NIL history (Foldable.toList bs)
-
-runProgA :: (Ord h) => Prog h a -> [a]
-runProgA p = runAssembly Set.empty  $ Foldable.toList (assemble p)
-
-
-deriving instance Functor (Prog h)
-instance Applicative (Prog h) where
-    --pure :: a -> f a
-    pure = Pure
-    --(<*>) :: f (a -> b) -> f a -> f b
-    (<*>) fab fa = do
-        ab <- fab
-        a <- fa
-        return (ab a)
-instance Monad (Prog h) where
-    --(>>=) :: m a -> (a -> m b) -> m b
-    (>>=) (Pure a) f = f a
-    (>>=) ma f = Bind ma f
-
-
-
 
 
 --data Prog h a = Pure a
@@ -295,7 +234,7 @@ findPathProg !invpath level = do
 
 findPath'Prog :: Level -> IO (Maybe [(From,To,Color,Int)])
 findPath'Prog level = do
-    let maybePath = listToMaybe $ runProgA $ findPathProg [] $ cleanup level
+    let maybePath = listToMaybe $ runProg $ findPathProg [] $ cleanup level
     return $ snd . List.mapAccumL apply' level <$> maybePath
 
 
