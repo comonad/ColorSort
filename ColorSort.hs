@@ -22,16 +22,18 @@ import Data.Foldable as Foldable
 import FreeMonoid
 
 
-[ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow]="abeglmoprswy"
+
+[ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow] = Color_ <$> "abeglmoprswy"
 bottleMaxHeight = 4 :: Int
 
-showColor :: Color -> String
-showColor c = List.head [ w
-                        | (w@(c1:_))<-List.words "ash blue earth green lila mint orange pink red sky weed yellow"
-                        , c == c1]
+newtype Color = Color_ Char deriving (Eq,Ord)
+
+instance Show Color where
+    show c = List.head [ w
+                       | (w@(c1:_))<-List.words "ash blue earth green lila mint orange pink red sky weed yellow"
+                       , c == Color_ c1]
 
 
-type Color = Char
 type Level = [[Color]]
 level141 :: Level
 level141 =
@@ -146,6 +148,30 @@ level1051 =
   ,[],[]
   ]
 
+level1297 :: Level
+level1297 =
+  [[orange,red,green,weed]
+  ,[ash,yellow,green,lila]
+  ,[mint,weed,sky,earth]
+  ,[earth,lila,mint,blue]
+  ,[lila,red,yellow,earth]
+  ,[green,weed,orange,mint]
+  ,[mint,ash,sky,orange]
+
+  ,[yellow,sky,pink,weed]
+  ,[pink,yellow,green,sky]
+  ,[red,orange,blue,pink]
+  ,[ash,ash,blue,pink]
+  ,[red,lila,blue,earth]
+
+  ,[],[]
+  ]
+
+-- [,,,,,,,,,,,]
+-- [,,,,,,,,,,,]
+-- [,,,,,,,,,,,]
+-- [,,,,,,,,,,,]
+
 {-
 
 levelXXXX :: Level
@@ -180,8 +206,8 @@ levelXXXX =
 --main = solve level919
 --main = solve level923
 --main = solve level1013
-main = solve level1051
-
+--main = solve level1051
+main = solve level1297
 
 
 
@@ -193,6 +219,11 @@ data Prog h a = Pure a
               | forall b. Bind (Prog h b) (b -> Prog h a)
               | Spawn [Prog h a]
               | JoinOn h (Prog h a)
+
+guardHistory :: h -> Prog h ()
+guardHistory h = JoinOn h (Pure ())
+foreach :: [a] -> Prog h a
+foreach as = Spawn $ fmap Pure as
 
 
 runBind :: Prog h a -> Prog h a
@@ -240,17 +271,16 @@ instance Monad (Prog h) where
     (>>=) ma f = Bind ma f
 
 
+
+
+
 --data Prog h a = Pure a
 --              | forall b. Bind (Prog h b) (b -> Prog h a)
 --              | Spawn [Prog h a]
 --              | JoinOn h (Prog h a)
 findPathProg :: INVPATH -> Level -> Prog Level PATH
 findPathProg !invpath level = do
-    let guardHistory :: h -> Prog h ()
-        guardHistory h = JoinOn h (Pure ())
-        foreach :: [a] -> Prog h a
-        foreach as = Spawn $ fmap Pure as
-        successTASK invpath' = return $ List.reverse invpath'
+    let successTASK invpath' = return $ List.reverse invpath'
     guardHistory level
     move <- foreach $ moves level
     let level' = cleanup $ apply move level
@@ -278,7 +308,7 @@ showPath (Just xs) = fmap showMove xs
 showPath _ = []
 
 showMove :: (From,To,Color,Int) -> String
-showMove (from,to,color,n) = show (from+1) ++ " -> " ++ show (to+1) ++ " (" ++ show n ++ " " ++ showColor color ++ ")"
+showMove (from,to,color,n) = show (from+1) ++ " -> " ++ show (to+1) ++ " (" ++ show n ++ " " ++ show color ++ ")"
 
 --List.mapAccumL apply'
 apply' :: Level -> (From,To,Color) -> (Level,(From,To,Color,Int))
