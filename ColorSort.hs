@@ -157,20 +157,30 @@ level1297 =
   ,[lila,red,yellow,earth]
   ,[green,weed,orange,mint]
   ,[mint,ash,sky,orange]
-
   ,[yellow,sky,pink,weed]
   ,[pink,yellow,green,sky]
   ,[red,orange,blue,pink]
   ,[ash,ash,blue,pink]
   ,[red,lila,blue,earth]
-
   ,[],[]
   ]
 
--- [,,,,,,,,,,,]
--- [,,,,,,,,,,,]
--- [,,,,,,,,,,,]
--- [,,,,,,,,,,,]
+level1337 :: Level
+level1337 =
+  [[mint,blue,sky,lila]
+  ,[pink,green,ash,lila]
+  ,[weed,orange,ash,earth]
+  ,[sky,weed,green,red]
+  ,[blue,blue,orange,red]
+  ,[earth,yellow,ash,pink]
+  ,[weed,sky,mint,lila]
+  ,[green,ash,red,pink]
+  ,[pink,blue,yellow,orange]
+  ,[mint,green,earth,red]
+  ,[yellow,sky,orange,mint]
+  ,[yellow,lila,earth,weed]
+  ,[],[]
+  ]
 
 {-
 
@@ -207,8 +217,8 @@ levelXXXX =
 --main = solve level923
 --main = solve level1013
 --main = solve level1051
-main = solve level1297
-
+--main = solve level1297
+main = solve level1337
 
 
 
