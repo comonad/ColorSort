@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE PackageImports #-}
 
 
 module Prog (
@@ -21,6 +22,8 @@ import Data.Function
 import Data.Set as Set
 import Data.Foldable as Foldable
 
+import qualified "parallel" Control.Parallel.Strategies as P
+
 import FreeMonoid
 
 
@@ -28,6 +31,7 @@ data Prog h a = Pure a
               | forall b. Bind (Prog h b) (b -> Prog h a)
               | Spawn [Prog h a]
               | JoinOn h (Prog h a)
+
 
 guardHistory :: h -> Prog h ()
 guardHistory h = JoinOn h (Pure ())
@@ -48,7 +52,6 @@ runBind (Bind pb b_pa) = case pb of
 runBind x = x
 
 
-
 data Assembly h a = AResult a | AJoin h (FreeMonoid(Assembly h a))
 assemble :: Prog h a -> FreeMonoid(Assembly h a)
 assemble (Pure a) = pure (AResult a)
@@ -63,7 +66,7 @@ runAssembly history as = runAssembly' NIL history as
     runAssembly' bs history (AResult a:as) = a:runAssembly' bs history as
     runAssembly' bs history (AJoin h a:as) = if Set.member h history then runAssembly' bs history as else runAssembly' (bs<>a) (Set.insert h history) as
     runAssembly' NIL history [] = []
-    runAssembly' bs history [] = runAssembly' NIL history (Foldable.toList bs)
+    runAssembly' bs history [] = runAssembly' NIL history (P.withStrategy (P.parList P.rseq) $ Foldable.toList bs)
 
 runProg :: (Ord h) => Prog h a -> [a]
 runProg p = runAssembly Set.empty  $ Foldable.toList (assemble p)
