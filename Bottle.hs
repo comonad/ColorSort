@@ -5,6 +5,7 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 
 
 module Bottle where
@@ -41,19 +42,42 @@ data Bottle = Bottle_
     , bottleFillLevel :: !Int
     } deriving (Eq,Ord)
 
+bottle_stackLiquid :: Liquid -> Bottle -> Bottle
+bottle_stackLiquid li@(n,_) Bottle_{..} = Bottle_{bottleLiquids=li:bottleLiquids,bottleFillLevel=bottleFillLevel+n}
+
+bottle_popLiquid :: Bottle -> Maybe(Liquid,Bottle)
+bottle_popLiquid Bottle_{bottleLiquids=[]} = Nothing
+bottle_popLiquid Bottle_{bottleLiquids=(li@(n,_)):bottleLiquids,bottleFillLevel} =
+    Just (li,Bottle_{bottleLiquids,bottleFillLevel=bottleFillLevel-n})
+
+
+
+bottleDropN :: Int -> Bottle -> Bottle
+bottleDropN 0 bottle = error "bottleDropN 0"
+bottleDropN n bottle = case bottle_popLiquid bottle of
+    Nothing -> error "bottleDropN _ emptyBottle"
+    Just ((k,c),b) | k<n -> error "bottleDropN toomuch liquid"
+    Just ((k,c),b) | k==n -> b
+    Just ((k,c),b) | k>n -> bottle_stackLiquid (k-n,c) b
+
+bottleFillN :: Int -> Color -> Bottle -> Bottle
+bottleFillN 0 color bottle = error "bottleFillN 0"
+bottleFillN n color bottle = case bottle_popLiquid bottle of
+    Just ((k,c),b) | c==color -> bottle_stackLiquid (k+n,color) b
+    _ -> bottle_stackLiquid (n,color) bottle
 
 
 bottleTopLiquid :: Bottle -> Maybe Liquid
-bottleTopLiquid bottle = listToMaybe $ bottleLiquids bottle
+bottleTopLiquid bottle = fst <$> bottle_popLiquid bottle
 bottleTopColor :: Bottle -> Maybe Color
 bottleTopColor bottle = snd <$> bottleTopLiquid bottle
 bottleUniColor :: Bottle -> Maybe Color
 bottleUniColor bottle = do
-    case bottleLiquids bottle of
-        [(_,c)] -> Just c
+    case bottle_popLiquid bottle of
+        Just ((n,c),_) | n==bottleFillLevel bottle -> Just c
         _ -> Nothing
 --bottleFillLevel :: Bottle -> Int
---bottleFillLevel (Bottle_ bottle) = List.length bottle
+
 bottleFreeSpace :: Bottle -> Int
 bottleFreeSpace bottle = bottleMaxHeight - bottleFillLevel bottle
 bottleIsEmpty :: Bottle -> Bool
@@ -63,23 +87,7 @@ bottleIsFull bottle = bottleFillLevel bottle == bottleMaxHeight
 bottleIsUnicolor :: Color -> Bottle -> Bool
 bottleIsUnicolor color bottle = bottleUniColor bottle == Just color
 bottleIsComplete :: Bottle -> Bool
-bottleIsComplete bottle = (fst<$>bottleLiquids bottle) == [bottleMaxHeight]
-bottleDropN :: Int -> Bottle -> Bottle
-bottleDropN 0 bottle = error "bottleDropN 0"
-bottleDropN n (Bottle_{bottleLiquids=((k,c):ls),bottleFillLevel})|k<n =
-    bottleDropN (n-k) Bottle_{bottleLiquids=ls,bottleFillLevel=bottleFillLevel-k}
-bottleDropN n (Bottle_{bottleLiquids=((k,c):ls),bottleFillLevel})|k==n =
-    Bottle_{bottleLiquids=ls,bottleFillLevel=bottleFillLevel-n}
-bottleDropN n (Bottle_{bottleLiquids=((k,c):ls),bottleFillLevel})|k>n =
-    Bottle_{bottleLiquids=(k-n,c):ls,bottleFillLevel=bottleFillLevel-n}
-bottleFillN :: Int -> Color -> Bottle -> Bottle
-bottleFillN 0 color bottle = error "bottleFillN 0"
-bottleFillN n color (Bottle_{bottleLiquids=((k,c):ls),bottleFillLevel}) | c==color =
-    Bottle_{bottleLiquids=(n+k,color):ls,bottleFillLevel=bottleFillLevel+n}
-bottleFillN n color (Bottle_{bottleLiquids,bottleFillLevel}) =
-    Bottle_{bottleLiquids=(n,color):bottleLiquids,bottleFillLevel=bottleFillLevel+n}
-
-
+bottleIsComplete bottle = (fst<$>bottleTopLiquid bottle) == Just bottleMaxHeight
 
 bottleTransferFromTo :: (Bottle,Bottle) -> Maybe (Bottle,Bottle)
 bottleTransferFromTo (fromBottle,toBottle) = do
