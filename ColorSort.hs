@@ -11,7 +11,7 @@ module Main where
 import Data.List as List
 import Control.Monad as Monad
 import Control.Monad.Trans.Maybe as Maybe
-import Data.Maybe (listToMaybe,fromJust,catMaybes)
+import Data.Maybe (listToMaybe,fromJust,catMaybes,maybeToList)
 import Control.Concurrent
 
 import Data.IORef
@@ -23,18 +23,20 @@ import FreeMonoid
 
 
 
-[ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow] = Color_ <$> "abeglmoprswy"
 bottleMaxHeight = 4 :: Int
 
-newtype Color = Color_ Char deriving (Eq,Ord)
 
+newtype Color = Color_ Int deriving (Eq,Ord)
+[ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow] = Color_ <$> [1..12]
 instance Show Color where
-    show c = List.head [ w
-                       | (w@(c1:_))<-List.words "ash blue earth green lila mint orange pink red sky weed yellow"
-                       , c == Color_ c1]
+    show (Color_ c) = List.words "ash blue earth green lila mint orange pink red sky weed yellow" !! (c-1)
 
 
-type Level = [[Color]]
+
+type Bottle = [Color]
+
+
+type Level = [Bottle]
 level141 :: Level
 level141 =
   [[mint,ash,sky,orange]
@@ -234,6 +236,10 @@ guardHistory :: h -> Prog h ()
 guardHistory h = JoinOn h (Pure ())
 foreach :: [a] -> Prog h a
 foreach as = Spawn $ fmap Pure as
+with :: Maybe a -> Prog h a
+with Nothing = Spawn []
+with (Just a) = Pure a
+
 
 
 runBind :: Prog h a -> Prog h a
@@ -326,7 +332,7 @@ apply' level (from,to,color) = (apply ft level,ft')
     where
       level' = cleanup level
       bottleFrom = level' !! from
-      n = List.length $ List.takeWhile(==color) bottleFrom
+      Just(n,(==color)->True) = bottleTopLiquid bottleFrom
       bottleTo = level' !! to
       Just from' = List.elemIndex bottleFrom level
       Just to' = List.elemIndex bottleTo level
@@ -337,24 +343,70 @@ apply' level (from,to,color) = (apply ft level,ft')
       ft' = (from',to'',color,n)
 
 
+type Liquid = (Int,Color)
+bottleTopLiquid :: Bottle -> Maybe Liquid
+bottleTopLiquid bottle = do
+    color <- bottleTopColor bottle
+    return (List.length $ List.takeWhile(==color) bottle,color)
+bottleTopColor :: Bottle -> Maybe Color
+bottleTopColor bottle = do
+    (color:_) <- Just bottle
+    return color
+bottleUniColor :: Bottle -> Maybe Color
+bottleUniColor bottle = do
+    (color:_) <- Just bottle
+    guard $ List.all (==color) bottle
+    return color
+bottleFillLevel :: Bottle -> Int
+bottleFillLevel = List.length
+bottleFreeSpace :: Bottle -> Int
+bottleFreeSpace bottle = bottleMaxHeight - bottleFillLevel bottle
+bottleIsEmpty :: Bottle -> Bool
+bottleIsEmpty = List.null
+bottleIsFull :: Bottle -> Bool
+bottleIsFull bottle = bottleFillLevel bottle == bottleMaxHeight
+bottleIsUnicolor :: Color -> Bottle -> Bool
+bottleIsUnicolor color [] = False
+bottleIsUnicolor color bottle = List.all (==color) bottle
+bottleIsComplete :: Bottle -> Bool
+bottleIsComplete bottle = (fst<$>bottleTopLiquid bottle) == Just bottleMaxHeight
+bottleDropN :: Int -> Bottle -> Bottle
+bottleDropN n = List.drop n
+bottleTransferFromTo :: (Bottle,Bottle) -> Maybe (Bottle,Bottle)
+bottleTransferFromTo (fromBottle,toBottle) = do
+    (n,color)<-bottleTopLiquid fromBottle
+    let k = bottleFreeSpace toBottle
+    let t = n `min` k
+    return (bottleDropN t fromBottle,List.replicate t color <> toBottle)
+
+
 
 type From = Int
 type To = Int
 moves :: Level -> [(From,To,Color)]
 moves level = do
   (bottleTo,j) <- List.zip level [0..]
-  guard (List.length bottleTo < 4)
-  (bottleFrom@(color:_),i) <- List.zip level [0..]
+  guard (not $ bottleIsFull bottleTo)
+  (bottleFrom,i) <- List.zip level [0..]
+  (amount,color) <- maybeToList $ bottleTopLiquid bottleFrom
   guard (i /= j)
-  guard (List.null bottleTo || color == List.head bottleTo)
+  guard (bottleIsEmpty bottleTo || Just color == bottleTopColor bottleTo)
   do
-    -- always move complete color
-    let amount = List.length $ List.takeWhile (==color ) bottleFrom
-    guard $ amount + List.length bottleTo <= bottleMaxHeight
+    -- always move complete color? no, it could be split...
+    -- only allow incomplete move if third bottle takes the rest.
+    let thirdBottles = do
+            (bottle,k)<-List.zip level [0..]
+            guard (i /= k)
+            guard (j /= k)
+            guard (Just color == bottleTopColor bottle)
+            guard $ not $ bottleIsFull bottle
+            return ()
+
+    guard $ amount <= bottleFreeSpace bottleTo || not(List.null thirdBottles)
     -- no silly move
-    guard $ List.drop amount bottleFrom /= bottleTo
+    guard $ bottleDropN amount bottleFrom /= bottleTo
     -- make no two unicolor bottles of the same color
-    guard $ not (List.null bottleTo) || List.null [()| bottle@(_:_) <- level, List.all (==color) bottle]
+    guard $ not (bottleIsEmpty bottleTo) || not (List.any (bottleIsUnicolor color) level)
   return (i,j,color)
 
 apply :: (From,To,Color) -> Level -> Level
@@ -365,16 +417,14 @@ apply (from,to,_) level =
     | (bottle, i) <- List.zip level [0..]
     ]
   where
-    bottleFrom@(color:_) = level !! from
+    bottleFrom@(_:_) = level !! from
     bottleTo = level !! to
-    transfer = takeWhile (==color) . List.take (bottleMaxHeight - length bottleTo) $ bottleFrom
-    bottleFrom' = List.drop (length transfer) bottleFrom
-    bottleTo' = transfer <> bottleTo
+    Just (bottleFrom',bottleTo') = bottleTransferFromTo (bottleFrom,bottleTo)
 
 cleanup :: Level -> Level
 cleanup level = List.sort [ bottle
                           | bottle <- level
-                          , List.length bottle < 4 || List.any (/= head bottle) bottle
+                          , not (bottleIsComplete bottle)
                           ]
 
 isPerfect :: Level -> Bool
