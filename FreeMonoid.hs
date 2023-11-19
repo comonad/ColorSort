@@ -11,6 +11,8 @@ module FreeMonoid (
 ) where
 
 
+-- TODO: build on NIL,SINGLETON,APPEND instead of CONS and SNOC
+
 import Data.Function
 import Data.Foldable as Foldable
 
@@ -24,7 +26,7 @@ pattern SNOC xs x <- (unSNOC -> Just(xs,x)) where
 pattern SINGLETON x <- (unSINGLETON -> Just x) where
     SINGLETON x = CONS_ x NIL
 pattern APPEND as bs <- (unAPPEND -> Just (as,bs)) where
-    APPEND as bs = APPEND_ as bs
+    APPEND as bs = as <> bs
 
 
 
