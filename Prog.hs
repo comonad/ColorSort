@@ -44,6 +44,14 @@ foreach as = Spawn $ fmap Pure as
 
 
 
+runBind1 :: Prog h a -> (a -> Prog h b) -> Prog h b
+runBind1 (Pure a) a_pb = a_pb a
+runBind1 (Bind (pc :: Prog h c) (c_pa :: c -> Prog h a)) a_pb = pc `runBind1` (\c -> c_pa c `runBind1` a_pb)
+runBind1 (JoinOn h cont) a_pb = JoinOn h (cont `runBind1` a_pb)
+runBind1 (Spawn pas) a_pb = Spawn [ runBind1 pa a_pb | pa <- pas ]
+
+
+-- | runBind is deprecated
 runBind :: Prog h a -> Prog h a
 runBind (Bind pb b_pa) = case pb of
                             (Pure a) -> runBind (b_pa a)
@@ -56,7 +64,7 @@ runBind x = x
 data Assembly h a = AResult a | AJoin h (FreeMonoid(Assembly h a))
 assemble :: Prog h a -> FreeMonoid(Assembly h a)
 assemble (Pure a) = pure (AResult a)
-assemble p@(Bind _ _) = assemble (runBind p)
+assemble (Bind pa a_pb) = assemble (runBind1 pa a_pb)
 assemble (Spawn ps) = mconcat $ assemble <$> ps
 assemble (JoinOn h cont) = pure (AJoin h (assemble cont))
 
