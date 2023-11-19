@@ -16,6 +16,7 @@ import Control.Monad as Monad
 import Control.Monad.Trans.Maybe as Maybe
 import Data.Maybe (listToMaybe,fromJust,catMaybes,maybeToList)
 import Control.Concurrent
+import Control.Applicative
 
 import Data.IORef
 import Data.Function
@@ -85,6 +86,16 @@ instance Monad (Prog h) where
     --(>>=) :: m a -> (a -> m b) -> m b
     (>>=) (Pure a) f = f a
     (>>=) ma f = Bind ma f
+instance Alternative (Prog h) where
+    empty = Spawn []
+    (<|>) a b = Spawn [a,b]
+instance MonadPlus (Prog h)
+
+
+
+
+
+
 
 
 
