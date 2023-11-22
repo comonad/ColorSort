@@ -8,7 +8,7 @@
 
 
 module Prog (
-    Prog(), guardHistory, foreach, runProg
+    Prog(), guardHistory, foreach, with, runProg
 ) where
 
 import Data.List as List
@@ -38,9 +38,9 @@ guardHistory :: h -> Prog h ()
 guardHistory h = JoinOn h (Pure ())
 foreach :: [a] -> Prog h a
 foreach as = Spawn $ fmap Pure as
---with :: Maybe a -> Prog h a
---with Nothing = Spawn []
---with (Just a) = Pure a
+with :: Maybe a -> Prog h a
+with Nothing = Spawn []
+with (Just a) = Pure a
 
 
 

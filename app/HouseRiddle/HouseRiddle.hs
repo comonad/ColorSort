@@ -1,6 +1,7 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PackageImports #-}
+{-# LANGUAGE ParallelListComp #-}
 
 
 -- | https://www.popularmechanics.com/science/math/a24620/riddle-of-the-week-10-einsteins-riddle/
@@ -14,7 +15,10 @@ import Data.List as List
 import Data.Function
 import Data.Foldable
 
+import Control.Monad
 import "transformers" Control.Monad.Trans.State.Lazy as State
+import "transformers" Control.Monad.Trans.Class as Trans
+import Prog
 
 {-
 There are five houses sitting next to each other on a neighborhood street, as depicted in the picture above.
@@ -70,6 +74,8 @@ insertRelationship (a,r,b) db = do
         (Just _) -> Nothing -- won't do
         (Nothing) -> Just $ setValueDB (a,r,b) db
 
+insertRelationships :: [Relationship] -> RelationshipDB -> Maybe RelationshipDB
+insertRelationships ns db = foldlM (flip insertRelationship) db ns
 
 fixDB :: RelationshipDB -> Maybe RelationshipDB
 fixDB db = do
@@ -87,7 +93,7 @@ fixDB_ db = State.execStateT (traverse_ prog $ allThatAreSame db) db
             db<-State.get
             let notsame = Set.toAscList $ Set.unions[getAllThatAreNotSame s db | s<-sames] :: [Token]
             let ns = [(a,IsNotSame,b) | a<-sames, b<-notsame]
-            State.modifyM $ \db-> foldlM (flip insertRelationship) db ns
+            State.modifyM $ insertRelationships ns
 
 
 getAllThatAreNotSame :: Token -> RelationshipDB -> Set Token
@@ -200,6 +206,13 @@ relationGroups = AND (UNEQ_ <$> fmap Set.fromList x)
         x :: [[Token]]
         x = List.groupBy ((==)`on`(List.head . show)) [minBound..maxBound]
 
+relationBinds :: Relation
+relationBinds = AND [OR[AND (zipWith(\a b->IS[a,b]) p g) | p<-permutations g1] | g<-gr]
+
+    where
+        (g1:gr) = [ g | let (AND gs) = relationGroups, (UNEQ g)<-gs ] :: [[Token]]
+
+
 leftOf :: Token -> Token -> Relation
 leftOf l r = OR [ AND[IS[l,h],IS[r,succ h]]  | h<-[House_1 .. House_4]]
 neighbourOf :: Token -> Token -> Relation
@@ -221,7 +234,7 @@ rules = AND $ relationGroups :
     , Keeps_horses `neighbourOf` Smokes_Dunhills --The man who keeps horses lives next to the Dunhill smoker.
     , IS[Nationality_German,Smokes_Prince] --The German smokes Prince.
     , Nationality_Norwegian `neighbourOf` Walls_blue --The Norwegian lives next to the house with blue walls.
-    ]
+    ] ++ [relationBinds]
 
 
 dedup :: Ord a => [a] -> [a]
@@ -292,7 +305,30 @@ main = do
     putStrLn ""
     traverse_ print . unAND $ mergeIs rules'
     putStrLn ""
+    print mainR
     return ()
+
+
+
+mainR = allThatAreSame $ List.head $ Prog.runProg runPR
+
+runPR :: Prog () RelationshipDB
+runPR = execStateT (progR $ mergeIs rules') emptyDB
+
+progR :: Relation -> StateT RelationshipDB (Prog ()) ()
+progR (AND rs) = traverse_ progR rs
+progR (OR rs) = Trans.lift (foreach rs) >>= progR
+progR (TRUE) = return ()
+progR (FALSE) = Trans.lift $ mzero
+progR (IS ts) = do
+    State.modifyM $ Prog.with . insertRelationships [ (a,IsSame,b) | (a:bs)<-List.tails ts , b<-bs ]
+    State.modifyM $ Prog.with . fixDB
+progR (UNEQ ts) = do
+    State.modifyM $ Prog.with . insertRelationships [ (a,IsNotSame,b) | (a:bs)<-List.tails ts , b<-bs ]
+    State.modifyM $ Prog.with . fixDB
+
+
+
 
 
 
