@@ -126,112 +126,6 @@ allThatAreSameRDB (RDB_ m) = [ rdb_isSame rdbx | (Right rdbx)<-Map.elems m ]
 
 
 
-newtype RelationshipDB = RelationshipDB_ (Map Token (Map Token RelationshipType))
-    deriving Eq
-
-emptyDB :: RelationshipDB
-emptyDB = RelationshipDB_ $ Map.fromList [ (token,Map.singleton token IsSame) | token<-[minBound..maxBound]]
-
-
-queryDB :: (Token,(),Token) -> RelationshipDB -> Maybe RelationshipType
-queryDB (a,(),b) (RelationshipDB_ m) = Map.lookup b (m Map.! a)
-
-setValueDB :: Relationship -> RelationshipDB -> RelationshipDB
-setValueDB (a,r,b) db = setVal a r b $ setVal b r a $ db
-    where
-        setVal a r b (RelationshipDB_ m) = RelationshipDB_ $ Map.adjust (Map.insert b r) a $ m
-
-insertRelationship :: Relationship -> RelationshipDB -> Maybe RelationshipDB
-insertRelationship (a,r,b) db = do
-    let oldR = queryDB (a,(),b) db :: Maybe RelationshipType
-    case (oldR) of
-        (Just o) | r==o -> Just db -- do nothing
-        (Just _) -> Nothing -- won't do
-        (Nothing) -> Just $ setValueDB (a,r,b) db
-
-insertRelationships :: [Relationship] -> RelationshipDB -> Maybe RelationshipDB
-insertRelationships ns db = foldlM (flip insertRelationship) db ns
-
-fixDB :: RelationshipDB -> Maybe RelationshipDB
-fixDB db = do
-    db' <- fixDB_ db
-    if db'==db then return db else fixDB db'
-
-fixDB_ :: RelationshipDB -> Maybe RelationshipDB
-fixDB_ db = State.execStateT (traverse_ prog $ allThatAreSame db) db
-    where
-        prog :: Set Token -> StateT RelationshipDB Maybe ()
-        prog (Set.toAscList->sames) = do
-            let rs = [(a,IsSame,b) | (a:bs)<-List.tails sames, b<-bs]
-            State.modifyM $ \db->foldlM (flip insertRelationship) db rs
-
-            db<-State.get
-            let notsame = Set.toAscList $ Set.unions[getAllThatAreNotSame s db | s<-sames] :: [Token]
-            let ns = [(a,IsNotSame,b) | a<-sames, b<-notsame]
-            State.modifyM $ insertRelationships ns
-
-
-getAllThatAreNotSame :: Token -> RelationshipDB -> Set Token
-getAllThatAreNotSame a (RelationshipDB_ m) =  Set.fromAscList [ b | (b,IsNotSame) <- Map.toAscList (m Map.! a) ]
-
-allThatAreSame :: RelationshipDB -> [Set Token] -- no singleton sets
-allThatAreSame (RelationshipDB_ m) = State.evalState prog (Map.empty,Map.empty)
-    where
-        lookupNext :: Token -> State (Map Token Token,Map Token Token) (Maybe Token)
-        lookupNext a = State.gets $ \(prev,next)->Map.lookup a next
-        lookupPrev :: Token -> State (Map Token Token,Map Token Token) (Maybe Token)
-        lookupPrev b = State.gets $ \(prev,next)->Map.lookup b prev
-
-        chain :: Token -> Token -> State (Map Token Token,Map Token Token) ()
-        chain a b = State.modify $ \(prev,next)->(Map.insert b a prev,Map.insert a b next)
-        unchain :: Token -> Token -> State (Map Token Token,Map Token Token) ()
-        unchain a b = State.modify $ \(prev,next)->(Map.delete b prev,Map.delete a next)
-
-        registerAsSame :: Token -> Token -> State (Map Token Token,Map Token Token) ()
-        registerAsSame a b | a<b = do
-            maybe_a_next <- lookupNext a
-            maybe_b_prev <- lookupPrev b
-            case (maybe_a_next,maybe_b_prev) of
-                (Just a_next,_          ) |  a_next == b       -> return ()
-                (Just a_next,Just b_prev) |  a_next == b_prev  -> return ()
-                (_          ,Just b_prev) |  a      == b_prev  -> return ()
-                (Just a_next,Just b_prev) |  a_next <  b_prev  -> registerAsSame a_next b_prev
-                (Just a_next,_          ) |  a_next <  b       -> registerAsSame a_next b
-                (_          ,Just b_prev) |  a      <  b_prev  -> registerAsSame a      b_prev
-                (Just a_next,Just b_prev) -> do
-                    unchain a a_next
-                    unchain b_prev b
-                    registerAsSame b_prev a
-                    registerAsSame a b
-                    registerAsSame b a_next
-                (Just a_next,Nothing) -> do
-                    unchain a a_next
-                    registerAsSame a b
-                    registerAsSame b a_next
-                (Nothing,Just b_prev) -> do
-                    unchain b_prev b
-                    registerAsSame b_prev a
-                    registerAsSame a b
-                (Nothing,Nothing) -> do
-                    chain a b
-
-        prog :: State (Map Token Token,Map Token Token) [Set Token]
-        prog = do
-            let sames = Set.toList . Set.fromList $ [ {- a is in bs contained -} [ b | (b,IsSame) <- Map.toAscList ma ] | (a,ma)<-Map.toAscList m] :: [[Token]]
-            let f (a:x@(b:_)) = registerAsSame a b >> f x
-                f _ = return ()
-            traverse_ f sames
-            (prev,next) <- State.get
-            let starts = Map.keys $ next Map.\\ prev :: [Token]
-                double a = (a,a)
-                f a = double <$> Map.lookup a next
-            return [Set.fromAscList $ s:List.unfoldr f s | s<-starts]
-
-
-
-
-
-
 
 
 ------------------------------------------------------------------------------------------------------------------------
@@ -385,22 +279,20 @@ main = do
 
 
 
-mainR = allThatAreSame $ List.head $ Prog.runProg runPR
+mainR = allThatAreSameRDB $ List.head $ Prog.runProg runPR
 
-runPR :: Prog () RelationshipDB
-runPR = execStateT (progR $ mergeIs rules') emptyDB
+runPR :: Prog () (RDB Token)
+runPR = execStateT (progR $ mergeIs rules') emptyRDB
 
-progR :: Relation -> StateT RelationshipDB (Prog ()) ()
+progR :: Relation -> StateT (RDB Token) (Prog ()) ()
 progR (AND rs) = traverse_ progR rs
 progR (OR rs) = Trans.lift (foreach rs) >>= progR
 progR (TRUE) = return ()
 progR (FALSE) = Trans.lift $ mzero
 progR (IS ts) = do
-    State.modifyM $ Prog.with . insertRelationships [ (a,IsSame,b) | (a:bs)<-List.tails ts , b<-bs ]
-    State.modifyM $ Prog.with . fixDB
+    State.modifyM $ Prog.with . insertRels [ (a,IsSame,b) | (a:bs)<-List.tails ts , b<-bs ]
 progR (UNEQ ts) = do
-    State.modifyM $ Prog.with . insertRelationships [ (a,IsNotSame,b) | (a:bs)<-List.tails ts , b<-bs ]
-    State.modifyM $ Prog.with . fixDB
+    State.modifyM $ Prog.with . insertRels [ (a,IsNotSame,b) | (a:bs)<-List.tails ts , b<-bs ]
 
 
 
