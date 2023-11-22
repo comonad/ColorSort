@@ -1,0 +1,100 @@
+# https://github.com/sol/hpack
+
+name:                ColorSort
+version:             0.1.0.0
+# synopsis:
+# description:
+license:             BSD3
+license-file:        LICENSE
+author:              Marc A. Ziegert
+copyright:           comonad@gmail.com
+maintainer:          comonad@gmail.com
+category:            Web
+#extra-source-files:  ChangeLog.md
+
+ghc-options: -O2 -threaded -with-rtsopts=-N2 -Wno-partial-type-signatures
+default-language: Haskell2010
+
+dependencies:
+  - base >= 4.13 && < 5
+  #- http-client >= 0.6.4.1
+  #- http-types >= 0.9.1
+  #- HTTP >= 4000.3.7
+  #- cryptonite >= 0.23
+  #- bytestring >= 0.10.10.1
+  #- memory >= 0.14.6
+  - containers >= 0.5.7.1
+  #- time >= 1.12.0.1
+  #- time >= 1.9.3
+  #- aeson >= 1.2.1.0
+  #- aeson-pretty >= 0.8.5
+  #- scientific >= 0.3.5.1
+  #- http-conduit >= 2.2.3.2
+  #- text >= 1.2.2.1
+  #- template-haskell >= 2.12.0.0
+  #- unordered-containers >= 0.2.8.0
+  - parallel
+  - transformers >= 0.6.1.1
+#  - machines >= 0.7.1
+  #- JuicyPixels >= 3.3.5
+  #- vector >= 0.12.1.2
+  #- zlib >= 0.6.2.2
+  #- wide-word >= 0.1.1.1
+  #- mmap >= 0.5.9
+  #- directory >= 1.3.6.0
+#  - gloss >= 1.13.2.1
+  #- deepseq >= 1.4.4.0
+  #- extra >= 1.7.8
+#  - protolude >= 0.3.0
+  #- mtl >= 2.2.2
+#  - lz4 >= 0.2.3.1
+  #- singletons >= 2.6
+  #- split-channel >= 0.2.0.1
+  #- wuss >= 1.1.17
+  #- websockets >= 0.12.7.1
+  #- free >= 5.1.3
+  #- pretty-simple >= 4.0.0.0
+  # -- static-canvas >= 0.2.0.3
+  #
+  #
+  #- file-embed >= 0.0.13.0
+  #- lens >= 4.18.1
+  #- data-default-class >= 0.1.2.0
+  #
+#  - sdl2
+#  - sdl2-ttf >= 2.1.1
+#  - linear
+#  - StateVar >= 1.2.1
+#  - Color
+#  - reflection >= 2.1.6
+
+
+#library:
+#    source-dirs: src/krakenapi
+library:
+    source-dirs: src
+
+executables:
+  ColorSort:
+    dependencies: [ColorSort]
+    source-dirs: app/ColorSort
+    main:        ColorSort.hs
+    ghc-options:
+      - -O2
+      - -threaded
+      - -with-rtsopts=-N2
+      - -Wno-partial-type-signatures
+      - -fwarn-incomplete-patterns
+  HouseRiddle:
+    dependencies: [ColorSort]
+    source-dirs: app/HouseRiddle
+    main:        HouseRiddle.hs
+    ghc-options:
+      - -O2
+      - -threaded
+      - -with-rtsopts=-N2
+      - -Wno-partial-type-signatures
+      - -fwarn-incomplete-patterns
+
+
+

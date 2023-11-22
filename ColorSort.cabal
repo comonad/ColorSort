@@ -1,0 +1,63 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.2.
+--
+-- see: https://github.com/sol/hpack
+
+name:           ColorSort
+version:        0.1.0.0
+category:       Web
+author:         Marc A. Ziegert
+maintainer:     comonad@gmail.com
+copyright:      comonad@gmail.com
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+
+library
+  exposed-modules:
+      Bottle
+      FreeMonoid
+      Prog
+      Queue
+  other-modules:
+      Paths_ColorSort
+  hs-source-dirs:
+      src
+  ghc-options: -O2 -threaded -with-rtsopts=-N2 -Wno-partial-type-signatures
+  build-depends:
+      base >=4.13 && <5
+    , containers >=0.5.7.1
+    , parallel
+    , transformers >=0.6.1.1
+  default-language: Haskell2010
+
+executable ColorSort
+  main-is: ColorSort.hs
+  other-modules:
+      Paths_ColorSort
+  hs-source-dirs:
+      app/ColorSort
+  ghc-options: -O2 -threaded -with-rtsopts=-N2 -Wno-partial-type-signatures -O2 -threaded -with-rtsopts=-N2 -Wno-partial-type-signatures -fwarn-incomplete-patterns
+  build-depends:
+      ColorSort
+    , base >=4.13 && <5
+    , containers >=0.5.7.1
+    , parallel
+    , transformers >=0.6.1.1
+  default-language: Haskell2010
+
+executable HouseRiddle
+  main-is: HouseRiddle.hs
+  other-modules:
+      Paths_ColorSort
+  hs-source-dirs:
+      app/HouseRiddle
+  ghc-options: -O2 -threaded -with-rtsopts=-N2 -Wno-partial-type-signatures -O2 -threaded -with-rtsopts=-N2 -Wno-partial-type-signatures -fwarn-incomplete-patterns
+  build-depends:
+      ColorSort
+    , base >=4.13 && <5
+    , containers >=0.5.7.1
+    , parallel
+    , transformers >=0.6.1.1
+  default-language: Haskell2010

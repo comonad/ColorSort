@@ -1,0 +1,15 @@
+cradle:
+  stack:
+    stackYaml: stack.yaml
+    components:
+#      - path: "./packages/krakenapi"
+#        component: "krakenapi:lib"
+#      - path: "./packages/cherry"
+#        component: "cherry:lib"
+#      - path: "./packages/rope"
+#        component: "rope:lib"
+      - path: "./ColorSort.hs"
+        component: "ColorSort:exe:ColorSort"
+      - path: "./HouseRiddle.hs"
+        component: "HouseRiddle:exe:HouseRiddle"
+
