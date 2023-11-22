@@ -2,6 +2,7 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PackageImports #-}
 {-# LANGUAGE ParallelListComp #-}
+{-# LANGUAGE NondecreasingIndentation #-}
 
 
 -- | https://www.popularmechanics.com/science/math/a24620/riddle-of-the-week-10-einsteins-riddle/
@@ -50,6 +51,80 @@ data RelationshipType = IsSame | IsNotSame deriving (Eq,Ord)
 
 
 type Relationship = (Token,RelationshipType,Token)
+
+
+
+data RDB_X a = RDB_X_ { rdb_isSame :: Set a
+                      , rdb_isNotSame :: Set a
+                      }
+
+newtype RDB a = RDB_ (Map a (Either a (RDB_X a)))
+
+emptyRDB :: RDB a
+emptyRDB = RDB_ Map.empty
+emptyRDB_X :: a -> RDB_X a
+emptyRDB_X a = RDB_X_ (Set.singleton a) Set.empty
+
+fetch_RDB_X :: (Ord a, Monad m) => a -> StateT (RDB a) m (a,RDB_X a)
+fetch_RDB_X a = do
+    (RDB_ m)<-State.get
+    case Map.lookup a m of
+        Nothing -> return (a,emptyRDB_X a)
+        Just (Right r) -> return (a,r)
+        Just (Left a') -> do
+            result@(a'',_) <- fetch_RDB_X a'
+            when (a'' /= a') $ replace_RDB_X (a,Left a'')
+            return result
+
+replace_RDB_X :: (Ord a, Monad m) => (a,Either a (RDB_X a)) -> StateT (RDB a) m ()
+replace_RDB_X (a,rdbx) = do
+    (RDB_ m)<-State.get
+    State.put . RDB_ $ Map.insert a rdbx m
+
+queryRDB :: (Ord a, Monad m) => (a,(),a) -> StateT (RDB a) m (Maybe RelationshipType)
+queryRDB (a,(),b) = do
+    (_,rdbx_a)<-fetch_RDB_X a
+    return $ if Set.member b $ rdb_isNotSame rdbx_a
+             then Just IsNotSame
+             else if Set.member b $ rdb_isSame rdbx_a
+             then Just IsSame
+             else Nothing
+
+setValueRDB :: (Ord a) => (a,RelationshipType,a) -> StateT (RDB a) Maybe ()
+setValueRDB (a,IsNotSame,b) = do
+    (a',rdbx_a)<-fetch_RDB_X a
+    (b',rdbx_b)<-fetch_RDB_X b
+    Trans.lift $ guard $ a' /= b'
+    let rdbx_a' = rdbx_a{rdb_isNotSame=Set.union (rdb_isNotSame rdbx_a) (rdb_isSame rdbx_b)}
+    let rdbx_b' = rdbx_b{rdb_isNotSame=Set.union (rdb_isNotSame rdbx_b) (rdb_isSame rdbx_a)}
+    replace_RDB_X (a',Right rdbx_a')
+    replace_RDB_X (b',Right rdbx_b')
+setValueRDB (a,IsSame,b) = do
+    (a',rdbx_a)<-fetch_RDB_X a
+    (b',rdbx_b)<-fetch_RDB_X b
+    if a' == b' then return () else do
+    let rdbx_c = RDB_X_ { rdb_isSame = rdb_isSame rdbx_a `Set.union` rdb_isSame rdbx_b
+                        , rdb_isNotSame = rdb_isNotSame rdbx_a `Set.union` rdb_isNotSame rdbx_b
+                        }
+    Trans.lift $ guard $ Set.null $ rdb_isSame rdbx_c `Set.intersection` rdb_isNotSame rdbx_c
+    let c' = min a' b'
+    let d' = max a' b'
+    replace_RDB_X (c', Right rdbx_c)
+    replace_RDB_X (d', Left c')
+
+
+
+insertRel :: (Ord a) => (a,RelationshipType,a) -> RDB a -> Maybe (RDB a)
+insertRel (a,r,b) = State.execStateT $ do
+    setValueRDB (a,r,b)
+
+insertRels :: (Ord a) => [(a,RelationshipType,a)] -> (RDB a) -> Maybe (RDB a)
+insertRels ns db = foldlM (flip insertRel) db ns
+
+allThatAreSameRDB :: (Ord a) => RDB a -> [Set a]
+allThatAreSameRDB (RDB_ m) = [ rdb_isSame rdbx | (Right rdbx)<-Map.elems m ]
+
+
 
 newtype RelationshipDB = RelationshipDB_ (Map Token (Map Token RelationshipType))
     deriving Eq
