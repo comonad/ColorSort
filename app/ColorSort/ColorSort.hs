@@ -173,7 +173,7 @@ level1337 = makeBottle <$>
   ]
 
 level1767 :: Level
-level1767 =
+level1767 = makeBottle <$>
   [[orange,yellow,blue,ash]
   ,[orange,pink,ash,green]
   ,[green,yellow,red,mint]
@@ -193,7 +193,7 @@ level1767 =
 {-
 
 levelXXXX :: Level
-levelXXXX =
+levelXXXX = makeBottle <$>
   [[,,,]
   ,[,,,]
   ,[,,,]
