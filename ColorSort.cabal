@@ -16,7 +16,6 @@ build-type:     Simple
 
 library
   exposed-modules:
-      Bottle
       FreeMonoid
       Prog
       Queue
@@ -35,6 +34,7 @@ library
 executable ColorSort
   main-is: ColorSort.hs
   other-modules:
+      Bottle
       Paths_ColorSort
   hs-source-dirs:
       app/ColorSort
