@@ -223,6 +223,23 @@ level1827 = makeBottle <$>
   ,[],[]
   ]
 
+level1901 :: Level
+level1901 = makeBottle <$>
+  [[lila,blue,yellow,weed]
+  ,[yellow,green,yellow,pink]
+  ,[yellow,weed,ash,sky]
+  ,[sky,earth,red,mint]
+  ,[pink,red,blue,ash]
+  ,[ash,red,pink,sky]
+  ,[mint,orange,green,blue]
+  ,[orange,earth,earth,mint]
+  ,[sky,lila,weed,lila]
+  ,[lila,orange,weed,green]
+  ,[ash,red,green,orange]
+  ,[blue,earth,pink,mint]
+  ,[],[]
+  ]
+
 
 {-
 
@@ -262,7 +279,8 @@ levelXXXX = makeBottle <$>
 --main = solve level1297
 --main = solve level1337
 --main = solve level1815
-main = solve level1827
+--main = solve level1827
+main = solve level1901
 
 
 
