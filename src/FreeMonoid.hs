@@ -1,13 +1,15 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE PackageImports #-}
 
 
 module FreeMonoid (
   freeMonoid, FreeMonoid(NIL),
   pattern CONS, pattern SNOC, pattern SINGLETON, pattern APPEND,
   unCONS, unSNOC, unSINGLETON, unAPPEND,
-  Foldable.toList
+  Foldable.toList, Foldable.null,
+  parToList, parToListS, parToList'
 ) where
 
 
@@ -16,6 +18,12 @@ module FreeMonoid (
 import Data.Function
 import Data.Foldable as Foldable
 
+import qualified "parallel" Control.Parallel.Strategies as P
+
+parToList,parToListS,parToList' :: FreeMonoid a -> [a]
+parToList pa = P.withStrategy (P.parList P.r0) $ Foldable.toList pa
+parToListS pa = P.withStrategy (P.parList P.rseq) $ Foldable.toList pa
+parToList' pa = P.withStrategy (P.parList P.rpar) $ Foldable.toList pa
 
 
 pattern CONS x xs <- (unCONS -> Just(x,xs)) where

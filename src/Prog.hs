@@ -25,8 +25,9 @@ import Data.Foldable as Foldable
 
 import qualified "parallel" Control.Parallel.Strategies as P
 
---import FreeMonoid
 import ParallelMonoid
+--import FreeMonoid
+--type ParallelMonoid = FreeMonoid
 
 data Prog h a = Pure a
               | forall b. Bind (Prog h b) (b -> Prog h a)
@@ -75,7 +76,7 @@ runAssembly history as = runAssembly' mempty history as
     runAssembly' bs history (AResult a:as) = a:runAssembly' bs history as
     runAssembly' bs history (AJoin h a:as) = if Set.member h history then runAssembly' bs history as else runAssembly' (bs<>a) (Set.insert h history) as
     runAssembly' bs history [] | Foldable.null bs = []
-    runAssembly' bs history [] = runAssembly' mempty history (ParallelMonoid.parToList' bs)
+    runAssembly' bs history [] = runAssembly' mempty history (parToListS bs)
 
 runProg :: (Ord h) => Prog h a -> [a]
 runProg p = runAssembly Set.empty  $ Foldable.toList (assemble p)

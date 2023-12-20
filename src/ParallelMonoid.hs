@@ -7,7 +7,7 @@
 
 
 module ParallelMonoid (
-  ParallelMonoid(), parToList, parToList',
+  ParallelMonoid(), parToList, parToListS, parToList',
 --  pattern CONS, pattern SNOC, pattern SINGLETON, pattern APPEND,
 --  unCONS, unSNOC, unSINGLETON, unAPPEND,
   Foldable.null, Foldable.toList
@@ -55,8 +55,9 @@ parStrat f (AP pxa px) = do
     runMAPm f (AP pxa' px')
 
 
-parToList,parToList' :: ParallelMonoid a -> [a]
+parToList,parToListS,parToList' :: ParallelMonoid a -> [a]
 parToList pa = Foldable.toList $ P.runEval (parStrat P.r0 pa)
+parToListS pa = Foldable.toList $ P.runEval (parStrat P.rseq pa)
 parToList' pa = Foldable.toList $ P.runEval (parStrat P.rpar pa)
 
 data ParallelMonoid a
