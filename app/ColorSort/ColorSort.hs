@@ -274,6 +274,93 @@ level1989 = makeBottle <$>
   ,[],[]
   ]
 
+level2041 :: Level
+level2041 = makeBottle <$>
+  [[ash,earth,red,lila]
+  ,[sky,earth,orange,green]
+  ,[weed,lila,blue,sky]
+  ,[orange,mint,yellow,green]
+  ,[green,blue,ash,orange]
+  ,[yellow,yellow,green,pink]
+  ,[mint,mint,red,lila]
+  ,[blue,weed,ash,pink]
+  ,[weed,lila,ash,orange]
+  ,[blue,red,sky,pink]
+  ,[earth,earth,pink,red]
+  ,[yellow,weed,mint,sky]
+  ,[],[]
+  ]
+
+level2101 :: Level
+level2101 = makeBottle <$>
+  [[orange,weed,blue,green]
+  ,[sky,green,ash,pink]
+  ,[orange,green,blue,sky]
+  ,[ash,yellow,sky,earth]
+  ,[earth,red,blue,red]
+  ,[mint,red,blue,lila]
+  ,[earth,ash,orange,sky]
+  ,[pink,pink,lila,mint]
+  ,[mint,yellow,orange,red]
+  ,[yellow,mint,ash,lila]
+  ,[green,weed,weed,pink]
+  ,[weed,lila,yellow,earth]
+  ,[],[]
+  ]
+
+level2113 :: Level
+level2113 = makeBottle <$>
+  [[yellow,red,blue,yellow]
+  ,[weed,lila,ash,weed]
+  ,[mint,weed,blue,sky]
+  ,[orange,yellow,pink,green]
+  ,[lila,sky,green,mint]
+  ,[blue,sky,lila,mint]
+  ,[lila,yellow,ash,earth]
+  ,[earth,ash,pink,sky]
+  ,[orange,earth,green,mint]
+  ,[pink,earth,orange,red]
+  ,[green,red,red,weed]
+  ,[pink,orange,ash,blue]
+  ,[],[]
+  ]
+
+level2273 :: Level
+level2273 = makeBottle <$>
+  [[pink,yellow,sky,orange]
+  ,[lila,weed,ash,yellow]
+  ,[green,blue,sky,orange]
+  ,[yellow,pink,ash,pink]
+  ,[pink,weed,mint,earth]
+  ,[earth,blue,ash,red]
+  ,[weed,ash,blue,lila]
+  ,[orange,green,mint,lila]
+  ,[lila,red,mint,mint]
+  ,[red,blue,yellow,green]
+  ,[red,earth,orange,green]
+  ,[sky,earth,sky,weed]
+  ,[],[]
+  ]
+
+
+level2289 :: Level
+level2289 = makeBottle <$>
+  [[green,lila,weed,ash]
+  ,[ash,green,mint,mint]
+  ,[orange,sky,pink,orange]
+  ,[red,lila,ash,blue]
+  ,[earth,pink,pink,red]
+  ,[yellow,earth,yellow,sky]
+  ,[red,weed,blue,sky]
+  ,[blue,earth,weed,sky]
+  ,[lila,mint,lila,mint]
+  ,[ash,weed,earth,green]
+  ,[pink,yellow,yellow,red]
+  ,[green,orange,blue,orange]
+  ,[],[]
+  ]
+
+
 {-
 
 levelXXXX :: Level
@@ -315,8 +402,12 @@ levelXXXX = makeBottle <$>
 --main = solve level1827
 --main = solve level1901
 --main = solve level1987
-main = solve level1989
-
+--main = solve level1989
+--main = solve level2041
+--main = solve level2101
+--main = solve level2113
+--main = solve level2273
+main = solve level2289
 
 
 

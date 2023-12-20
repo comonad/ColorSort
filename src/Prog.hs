@@ -25,8 +25,8 @@ import Data.Foldable as Foldable
 
 import qualified "parallel" Control.Parallel.Strategies as P
 
-import FreeMonoid
-
+--import FreeMonoid
+import ParallelMonoid
 
 data Prog h a = Pure a
               | forall b. Bind (Prog h b) (b -> Prog h a)
@@ -61,21 +61,21 @@ runBind (Bind pb b_pa) = case pb of
 runBind x = x
 
 
-data Assembly h a = AResult a | AJoin h (FreeMonoid(Assembly h a))
-assemble :: Prog h a -> FreeMonoid(Assembly h a)
+data Assembly h a = AResult a | AJoin h (ParallelMonoid(Assembly h a))
+assemble :: Prog h a -> ParallelMonoid(Assembly h a)
 assemble (Pure a) = pure (AResult a)
 assemble (Bind pa a_pb) = assemble (runBind1 pa a_pb)
 assemble (Spawn ps) = mconcat $ assemble <$> ps
 assemble (JoinOn h cont) = pure (AJoin h (assemble cont))
 
 runAssembly :: Ord h => Set h -> [Assembly h a] -> [a]
-runAssembly history as = runAssembly' NIL history as
+runAssembly history as = runAssembly' mempty history as
     where
-    runAssembly' :: Ord h => FreeMonoid (Assembly h a) -> Set h -> [Assembly h a] -> [a]
+    runAssembly' :: Ord h => ParallelMonoid (Assembly h a) -> Set h -> [Assembly h a] -> [a]
     runAssembly' bs history (AResult a:as) = a:runAssembly' bs history as
     runAssembly' bs history (AJoin h a:as) = if Set.member h history then runAssembly' bs history as else runAssembly' (bs<>a) (Set.insert h history) as
-    runAssembly' NIL history [] = []
-    runAssembly' bs history [] = runAssembly' NIL history (P.withStrategy (P.parList P.rseq) $ Foldable.toList bs)
+    runAssembly' bs history [] | Foldable.null bs = []
+    runAssembly' bs history [] = runAssembly' mempty history (ParallelMonoid.parToList' bs)
 
 runProg :: (Ord h) => Prog h a -> [a]
 runProg p = runAssembly Set.empty  $ Foldable.toList (assemble p)
