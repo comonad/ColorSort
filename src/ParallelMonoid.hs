@@ -8,32 +8,14 @@
 
 module ParallelMonoid (
   ParallelMonoid(), parToList, parToListS, parToList',
---  pattern CONS, pattern SNOC, pattern SINGLETON, pattern APPEND,
---  unCONS, unSNOC, unSINGLETON, unAPPEND,
   Foldable.null, Foldable.toList
 ) where
-
-
--- TODO: build on NIL,SINGLETON,APPEND instead of CONS and SNOC
 
 import Data.Function
 import Data.Foldable as Foldable
 import Data.Traversable as Traversable
 import qualified "parallel" Control.Parallel.Strategies as P
 
-
-{-
-pattern CONS x xs <- (unCONS -> Just(x,xs)) where
-    CONS x xs = CONS_ x xs
-pattern SNOC xs x <- (unSNOC -> Just(xs,x)) where
-    SNOC xs x = SNOC_ xs x
-
-pattern SINGLETON x <- (unSINGLETON -> Just x) where
-    SINGLETON x = CONS_ x NIL
-pattern APPEND as bs <- (unAPPEND -> Just (as,bs)) where
-    APPEND as bs = as <> bs
-
--}
 
 
 rparWith = (P.parEval .)
@@ -87,9 +69,6 @@ instance Traversable ParallelMonoid where
 
 
 instance Functor ParallelMonoid where
-    --fmap f NIL = NIL
-    --fmap f (SINGLETON a) = SINGLETON (f a)
-    --fmap f (MAP xa x) = MAP (f . xa) x
     fmap f pa = MAP f pa
 
 
@@ -105,10 +84,7 @@ instance Show a => Show (ParallelMonoid a) where
     show = show . Foldable.toList
 instance Applicative ParallelMonoid where
     pure = SINGLETON
-    --(<*>) :: f (a -> b) -> f a -> f b
-    --(<*>) fab fa = JOIN ((<$> fa) <$> fab)
     (<*>) fab fa = AP fab fa
-    --(<*>) fab fa = L2 [ ab <$> fa | ab <- Foldable.toList fab ]
 
 instance Monad ParallelMonoid where
     (>>=) NIL f = NIL
