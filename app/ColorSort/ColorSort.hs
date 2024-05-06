@@ -25,6 +25,26 @@ import Bottle
 import Prog
 
 type Level = [Bottle]
+
+
+
+level105 :: Level
+level105 = makeBottle <$>
+  [[blue,green,sky,sky]
+  ,[lila,pink,weed,ash]
+  ,[orange,lila,red,earth]
+  ,[orange,pink,red,orange]
+  ,[green,red,yellow,blue]
+  ,[yellow,green,earth,green]
+  ,[earth,lila,red,mint]
+  ,[mint,lila,pink,mint]
+  ,[weed,ash,sky,blue]
+  ,[earth,yellow,ash,weed]
+  ,[ash,yellow,mint,blue]
+  ,[weed,sky,pink,orange]
+  ,[],[]
+  ]
+
 level141 :: Level
 level141 = makeBottle <$>
   [[mint,ash,sky,orange]
@@ -41,6 +61,7 @@ level141 = makeBottle <$>
   ,[mint,lila,green,green]
   ,[],[]
   ]
+
 level843 :: Level
 level843 = makeBottle <$>
   [[ash,green,sky,weed]
@@ -360,7 +381,46 @@ level2289 = makeBottle <$>
   ,[],[]
   ]
 
+level2421 :: Level
+level2421 = makeBottle <$>
+  [[earth,orange,pink,orange]
+  ,[weed,weed,green,sky]
+  ,[mint,ash,green,blue]
+  ,[yellow,earth,green,earth]
+  ,[ash,ash,sky,mint]
+  ,[orange,lila,orange,sky]
+  ,[red,earth,pink,lila]
 
+  ,[red,blue,weed,yellow]
+  ,[pink,lila,mint,red]
+  ,[lila,blue,ash,yellow]
+  ,[sky,red,mint,weed]
+  ,[blue,pink,green,yellow]
+
+  ,[],[]
+  ]
+
+level2561 :: Level
+level2561 = makeBottle <$>
+  [[sky,earth,earth,sky]
+  ,[mint,weed,earth,b]
+  ,[blue,sky,yellow,ash]
+  ,[red,blue,orange,weed]
+  ,[mint,blue,pink,pink]
+  ,[weed,sky,orange,f]
+  ,[yellow,lila,ash,green]
+
+  ,[mint,lila,yellow,green]
+  ,[ash,green,red,mint]
+  ,[orange,pink,red,ash]
+  ,[lila,earth,lila,orange]
+  ,[green,red,yellow,blue]
+
+  ,[],[]
+  ]
+  where[f,b]=[pink,weed]
+
+main = solve level2561
 {-
 
 levelXXXX :: Level
@@ -388,26 +448,6 @@ levelXXXX = makeBottle <$>
 -- [ash,blue,earth,green,lila,mint,orange,pink,red,sky,weed,yellow]
 
 -}
-
---main = solve level141
---main = solve level843
---main = solve level877
---main = solve level919
---main = solve level923
---main = solve level1013
---main = solve level1051
---main = solve level1297
---main = solve level1337
---main = solve level1815
---main = solve level1827
---main = solve level1901
---main = solve level1987
---main = solve level1989
---main = solve level2041
---main = solve level2101
---main = solve level2113
---main = solve level2273
-main = solve level2289
 
 
 
