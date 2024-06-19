@@ -420,7 +420,47 @@ level2561 = makeBottle <$>
   ]
   where[f,b]=[pink,weed]
 
-main = solve level2561
+
+level2749 :: Level
+level2749 = makeBottle <$>
+  [[weed,lila,pink,mint]
+  ,[green,red,sky,ash]
+  ,[pink,red,lila,weed]
+  ,[mint,green,pink,yellow]
+  ,[blue,sky,orange,red]
+  ,[earth,pink,sky,ash]
+  ,[yellow,lila,earth,weed]
+
+  ,[red,green,green,orange]
+  ,[blue,mint,yellow,ash]
+  ,[weed,lila,sky,earth]
+  ,[orange,yellow,orange,earth]
+  ,[blue,ash,blue,mint]
+
+  ,[],[]
+  ]
+
+level2837 :: Level
+level2837 = makeBottle <$>
+  [[earth,sky,green,lila]
+  ,[red,blue,yellow,earth]
+  ,[sky,weed,pink,earth]
+  ,[ash,lila,sky,red]
+  ,[weed,yellow,orange,green]
+  ,[mint,weed,lila,yellow]
+  ,[mint,blue,mint,mint]
+
+  ,[pink,pink,red,orange]
+  ,[blue,orange,lila,green]
+  ,[sky,ash,orange,weed]
+  ,[red,ash,green,ash]
+  ,[earth,blue,yellow,pink]
+
+  ,[],[]
+  ]
+
+
+main = solve level2837
 {-
 
 levelXXXX :: Level
@@ -533,6 +573,9 @@ moves level = do
     guard $ bottleDropN amount bottleFrom /= bottleTo
     -- make no two unicolor bottles of the same color
     guard $ not (bottleIsEmpty bottleTo) || not (List.any (bottleIsUnicolor color) level)
+    -- do not join unicolor bottles 3 atop 1
+    when (amount==3) $ do
+        guard . not $ (bottleFillLevel bottleFrom == 3) && (bottleFillLevel bottleTo == 1)
   return (i,j,color)
 
 apply :: (From,To,Color) -> Level -> Level
