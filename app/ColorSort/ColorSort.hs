@@ -556,8 +556,126 @@ level3027 = makeBottle <$>
   ,[],[]
   ]
 
+level3083 :: Level
+level3083 = makeBottle <$>
+  [[blue,ash,blue,pink]
+  ,[earth,yellow,sky,weed]
+  ,[pink,orange,red,orange]
+  ,[lila,red,green,weed]
+  ,[blue,ash,earth,sky]
+  ,[yellow,mint,earth,mint]
+  ,[yellow,sky,weed,red]
 
-main = solve level3027
+  ,[mint,orange,yellow,pink]
+  ,[ash,green,lila,pink]
+  ,[sky,green,lila,red]
+  ,[ash,weed,earth,lila]
+  ,[mint,orange,blue,green]
+
+  ,[],[]
+  ]
+
+level3131 :: Level
+level3131 = makeBottle <$>
+  [[green,blue,yellow,orange]
+  ,[pink,sky,orange,red]
+  ,[yellow,green,mint,earth]
+  ,[blue,earth,blue,weed]
+  ,[sky,ash,mint,ash]
+  ,[orange,sky,green,yellow]
+  ,[green,weed,sky,mint]
+
+  ,[blue,weed,lila,earth]
+  ,[ash,weed,lila,pink]
+  ,[orange,red,mint,red]
+  ,[lila,pink,earth,pink]
+  ,[lila,ash,red,yellow]
+
+  ,[],[]
+  ]
+
+
+-- | impossible ?!
+level3145 :: Level
+level3145 = makeBottle <$>
+  [[yellow,orange,pink,mint]
+  ,[mint,ash,weed,green]
+  ,[earth,blue,pink,green]
+  ,[earth,blue,pink,earth]
+  ,[red,sky,orange,green]
+  ,[sky,orange,ash,yellow]
+  ,[red,green,weed,lila]
+
+  ,[mint,weed,red,yellow]
+  ,[yellow,sky,blue,weed]
+  ,[orange,sky,ash,earth]
+  ,[lila,ash,blue,lila]
+  ,[lila,mint,pink,red]
+
+  ,[],[]
+  ]
+
+
+level3213 :: Level
+level3213 = makeBottle <$>
+  [[pink,weed,yellow,lila]
+  ,[earth,blue,lila,lila]
+  ,[yellow,yellow,ash,earth]
+  ,[pink,green,blue,mint]
+  ,[red,sky,mint,earth]
+  ,[lila,red,weed,red]
+  ,[orange,sky,sky,green]
+
+  ,[orange,green,yellow,orange]
+  ,[weed,red,mint,ash]
+  ,[blue,ash,ash,pink]
+  ,[weed,orange,sky,mint]
+  ,[blue,green,pink,earth]
+
+  ,[],[]
+  ]
+
+
+level3319 :: Level
+level3319 = makeBottle <$>
+  [[ash,ash,earth,lila]
+  ,[pink,green,ash,red]
+  ,[pink,sky,earth,earth]
+  ,[weed,orange,yellow,red]
+  ,[blue,orange,blue,yellow]
+  ,[red,sky,pink,weed]
+  ,[earth,ash,yellow,lila]
+
+  ,[green,pink,blue,mint]
+  ,[green,mint,green,sky]
+  ,[weed,lila,lila,mint]
+  ,[orange,sky,yellow,red]
+  ,[weed,orange,mint,blue]
+
+  ,[],[]
+  ]
+
+level3683 :: Level
+level3683 = makeBottle <$>
+  [[earth,earth,orange,lila]
+  ,[weed,lila,sky,earth]
+  ,[sky,weed,mint,lila]
+  ,[sky,pink,green,yellow]
+  ,[blue,ash,blue,red]
+  ,[green,pink,mint,pink]
+  ,[yellow,blue,blue,weed]
+
+  ,[earth,green,green,mint]
+  ,[mint,red,orange,lila]
+  ,[orange,weed,orange,yellow]
+  ,[ash,ash,red,ash]
+  ,[yellow,sky,red,pink]
+
+  ,[],[]
+  ]
+
+main = solve level3683
+
 {-
 
 levelXXXX :: Level
