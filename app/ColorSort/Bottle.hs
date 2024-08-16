@@ -39,7 +39,7 @@ type Liquid = (Int,Color)
 --    { bottleLiquids :: [Liquid]
 --    , bottleFillLevel :: !Int
 --    } deriving (Eq,Ord)
-data Bottle = Bottle_ Integer deriving (Eq,Ord)
+newtype Bottle = Bottle_ Integer deriving (Eq,Ord)
 
 makeBottle :: [Color] -> Bottle
 makeBottle cs = List.foldr bottle_stackLiquid (Bottle_ 0) liquids
