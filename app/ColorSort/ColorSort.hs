@@ -713,7 +713,28 @@ level3815 = makeBottle <$>
   ,[],[]
   ]
 
-main = solve level3815
+-- | impossible ?!
+level3893 :: Level
+level3893 = makeBottle <$>
+  [[lila,orange,weed,sky]
+  ,[pink,yellow,yellow,weed]
+  ,[blue,mint,pink,ash]
+  ,[pink,green,red,blue]
+  ,[sky,earth,weed,red]
+  ,[blue,sky,ash,orange]
+  ,[earth,earth,mint,ash]
+
+  ,[green,lila,orange,lila]
+  ,[sky,red,yellow,blue]
+  ,[yellow,ash,green,mint]
+  ,[green,lila,weed,mint]
+  ,[pink,red,earth,orange]
+
+  ,[],[]
+  ]
+
+
+main = solve level3893
 
 {-
 
@@ -768,7 +789,7 @@ findPath'Prog level = do
     return $ snd . List.mapAccumL apply' level <$> maybePath
 
 
-type PATH = [(From,To,Color)]
+type PATH = [(From,To,Color,Int)]
 type INVPATH = PATH
 
 solve :: Level -> IO ()
@@ -784,26 +805,25 @@ showMove :: (From,To,Color,Int) -> String
 showMove (from,to,color,n) = show (from+1) ++ " -> " ++ show (to+1) ++ " (" ++ show n ++ " " ++ show color ++ ")"
 
 --List.mapAccumL apply'
-apply' :: Level -> (From,To,Color) -> (Level,(From,To,Color,Int))
-apply' level (from,to,color) = (apply ft level,ft')
+apply' :: Level -> (From,To,Color,Int) -> (Level,(From,To,Color,Int))
+apply' level (from,to,color,n) = (apply ft level,ft)
     where
       level' = cleanup level
       bottleFrom = level' !! from
-      Just(n,(==color)->True) = bottleTopLiquid bottleFrom
+      Just(nn,(==color)->True) = bottleTopLiquid bottleFrom
       bottleTo = level' !! to
       Just from' = List.elemIndex bottleFrom level
       Just to' = List.elemIndex bottleTo level
       to'' = if from' == to'
                     then (1+from'+) $ fromJust $ List.elemIndex bottleTo $ List.drop (from'+1) level
                     else to'
-      ft = (from',to'',color)
-      ft' = (from',to'',color,n)
+      ft = (from',to'',color,if nn<n then 0 else n)
 
 
 
 type From = Int
 type To = Int
-moves :: Level -> [(From,To,Color)]
+moves :: Level -> [(From,To,Color,Int)]
 moves level = do
   (bottleTo,j) <- List.zip level [0..]
   guard (not $ bottleIsFull bottleTo)
@@ -811,6 +831,7 @@ moves level = do
   (amount,color) <- maybeToList $ bottleTopLiquid bottleFrom
   guard (i /= j)
   guard (bottleIsEmpty bottleTo || Just color == bottleTopColor bottleTo)
+  let amountMoving = (amount `min` bottleFreeSpace bottleTo)
   do
     -- always move complete color? no, it could be split...
     -- only allow incomplete move if third bottle takes the rest.
@@ -824,16 +845,16 @@ moves level = do
 
     guard $ amount <= bottleFreeSpace bottleTo || not(List.null thirdBottles)
     -- no silly move
-    guard $ bottleDropN (amount `min` bottleFreeSpace bottleTo) bottleFrom /= bottleTo
+    guard $ bottleDropN amountMoving bottleFrom /= bottleTo
     -- make no two unicolor bottles of the same color
     guard $ not (bottleIsEmpty bottleTo) || not (List.any (bottleIsUnicolor color) level)
     -- do not join unicolor bottles 3 atop 1
     when (amount==3) $ do
         guard . not $ (bottleFillLevel bottleFrom == 3) && (bottleFillLevel bottleTo == 1)
-  return (i,j,color)
+  return (i,j,color,amountMoving)
 
-apply :: (From,To,Color) -> Level -> Level
-apply (from,to,_) level =
+apply :: (From,To,Color,Int) -> Level -> Level
+apply (from,to,_,_) level =
     [ if i==from then bottleFrom'
       else if i==to then bottleTo'
       else bottle
