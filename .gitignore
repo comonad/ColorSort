@@ -2,3 +2,4 @@
 *~
 *.hi
 .stack-work/
+dist-newstyle/

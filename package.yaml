@@ -17,6 +17,9 @@ language: Haskell2010
 
 dependencies:
   - base >= 4.13 && < 5
+  - reflection
+  - aeson
+  - text-short
   #- http-client >= 0.6.4.1
   #- http-types >= 0.9.1
   #- HTTP >= 4000.3.7
@@ -34,7 +37,8 @@ dependencies:
   #- template-haskell >= 2.12.0.0
   #- unordered-containers >= 0.2.8.0
   - parallel
-  - transformers >= 0.6.1.1
+  - transformers >= 0.6.1.0
+  - mtl >= 2.3.1
 #  - machines >= 0.7.1
   #- JuicyPixels >= 3.3.5
   #- vector >= 0.12.1.2
@@ -75,6 +79,18 @@ library:
     source-dirs: src
 
 executables:
+  Mills:
+    dependencies: [vector]
+    source-dirs: app/Mills
+    main:        Mills.hs
+    ghc-options:
+      - -O2
+      - -threaded
+      - -with-rtsopts=-N2
+      - -Wno-partial-type-signatures
+      - -fwarn-incomplete-patterns
+      - -ddump-to-file
+      - -ddump-stg-final
   ColorSort:
     dependencies: [ColorSort]
     source-dirs: app/ColorSort

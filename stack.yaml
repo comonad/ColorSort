@@ -8,7 +8,9 @@
 # A snapshot resolver dictates the compiler version and the set of packages
 # to be used for project dependencies. For example:
 #
-resolver: lts-21.22
+resolver: lts-22.33 # LTS Haskell 22.33 (ghc-9.6.6) Published on 2024-08-12
+
+#resolver: lts-21.22
 # resolver: nightly-2015-09-21
 # resolver: ghc-7.10.2
 #
@@ -40,8 +42,8 @@ packages:
 # - git: https://github.com/commercialhaskell/stack.git
 #   commit: e7b331f14bcffb8367cd58fbfc8b40ec7642100a
 #
-extra-deps:
-  - transformers-0.6.1.1@sha256:80d128763c6965dfcddca2155b3dec3bb1970d476f0c8cceb4bb28608ab75e7c,3243
+#extra-deps:
+#  - transformers-0.6.1.1@sha256:80d128763c6965dfcddca2155b3dec3bb1970d476f0c8cceb4bb28608ab75e7c,3243
 # Override default flag values for local packages and extra-deps
 # flags: {}
 

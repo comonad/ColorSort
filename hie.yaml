@@ -8,8 +8,10 @@ cradle:
 #        component: "cherry:lib"
 #      - path: "./packages/rope"
 #        component: "rope:lib"
-      - path: "./ColorSort.hs"
+      - path: "./src"
+        component: "ColorSort:lib"
+      - path: "./app/ColorSort"
         component: "ColorSort:exe:ColorSort"
-      - path: "./HouseRiddle.hs"
-        component: "HouseRiddle:exe:HouseRiddle"
+      - path: "./app/HouseRiddle"
+        component: "ColorSort:exe:HouseRiddle"
 

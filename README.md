@@ -15,3 +15,10 @@ I tried to use the same solver for the problem HouseRiddle, but HouseRiddle was 
 I would now suggest using https://hackage.haskell.org/package/holmes for HouseRiddle instead.
 
     stack run HouseRiddle
+    
+
+nine men's morris
+
+    stack run Mills
+    
+
