@@ -79,6 +79,18 @@ library:
     source-dirs: src
 
 executables:
+  Blockout3D:
+    dependencies: [ColorSort]
+    source-dirs: app/Blockout3D
+    main:        Blockout3D.hs
+    ghc-options:
+      - -O2
+      - -threaded
+      - -with-rtsopts=-N2
+      - -Wno-partial-type-signatures
+      - -fwarn-incomplete-patterns
+      - -ddump-to-file
+      - -ddump-stg-final
   Mills:
     dependencies: [vector]
     source-dirs: app/Mills

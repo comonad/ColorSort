@@ -20,5 +20,9 @@ I would now suggest using https://hackage.haskell.org/package/holmes for HouseRi
 nine men's morris
 
     stack run Mills
-    
+
+Solver for mobile game Blockout3D
+
+    stack run Blockout3D
+
 
