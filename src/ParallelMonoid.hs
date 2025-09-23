@@ -8,7 +8,8 @@
 
 module ParallelMonoid (
   ParallelMonoid(), parToList, parToListS, parToList',
-  Foldable.null, Foldable.toList
+  Foldable.null, Foldable.toList,
+  fromList
 ) where
 
 import Data.Function
@@ -52,7 +53,8 @@ data ParallelMonoid a
     | JOIN (ParallelMonoid (ParallelMonoid a))
     | forall x. AP (ParallelMonoid (x->a)) (ParallelMonoid x)
 
-
+fromList :: [a] -> ParallelMonoid a
+fromList = L1
 
 runMAPm :: Applicative m => (a->m b) -> ParallelMonoid a -> m (ParallelMonoid b)
 runMAPm f NIL = pure NIL

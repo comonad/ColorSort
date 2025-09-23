@@ -1,0 +1,13 @@
+*.bz2 binary
+*.gpg binary
+*.gz binary
+*.jpeg binary
+*.jpg binary
+*.lz4 binary
+*.pdf binary
+*.png binary
+*.tar binary
+*.tbz2 binary
+*.tgz binary
+*.txz binary
+*.xz binary
